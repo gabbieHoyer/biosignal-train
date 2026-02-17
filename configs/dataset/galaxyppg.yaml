@@ -1,0 +1,36 @@
+# @package dataset
+
+train:
+  _target_: biosignals.data.datasets.windowed_npz.WindowedNpzDataset
+  root: ${oc.env:DATA_STD_DIR,./data/standardized}/galaxyppg/v1
+  split: train
+  view: views/windows.parquet
+  subjects_dir: subjects
+  modalities: ["ppg", "acc"]
+  label_col: hr
+  dropna_labels: true
+  subject_cache_size: 8
+
+val:
+  _target_: biosignals.data.datasets.windowed_npz.WindowedNpzDataset
+  root: ${oc.env:DATA_STD_DIR,./data/standardized}/galaxyppg/v1
+  split: val
+  view: views/windows.parquet
+  subjects_dir: subjects
+  modalities: ["ppg", "acc"]
+  label_col: hr
+  dropna_labels: true
+  subject_cache_size: 8
+
+# Wrapper-only settings live HERE (not inside train/val nodes)
+cache:
+  train: null
+  val: null
+
+
+
+# # want to cache val:
+# cache:
+#   train: null
+#   val: ${oc.env:DATA_CACHE_DIR,./data/cache}/galaxyppg_v1_val
+

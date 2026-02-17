@@ -1,0 +1,9 @@
+# @package model
+
+_target_: biosignals.models.architectures.encoder_classifier.EncoderClassifier
+in_channels: 12
+num_classes: 5
+emb_dim: 256
+depth: 4
+dropout: 0.1
+primary_modality: main

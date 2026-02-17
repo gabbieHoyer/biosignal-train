@@ -1,0 +1,23 @@
+# @package transforms
+
+## PPG-only baseline (dataset emits only ppg, then rename to main
+
+train:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+    - _target_: biosignals.data.transforms.base.RenameModality
+      src: ppg
+      dst: main
+      drop_src: true
+
+val:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+    - _target_: biosignals.data.transforms.base.RenameModality
+      src: ppg
+      dst: main
+      drop_src: true

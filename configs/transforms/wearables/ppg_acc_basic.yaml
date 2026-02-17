@@ -1,0 +1,62 @@
+# @package transforms
+
+window_size: 2048
+primary_raw: ppg
+primary_model: main
+
+train:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+
+    # Resample ACC -> PPG fs (and align lengths), so future crops apply to both
+    - _target_: biosignals.data.transforms.resample.ResampleToPrimary
+      primary_modality: ${transforms.primary_raw}
+      match_length: primary
+      default_fs: 100.0
+
+    # Optional: light bandpass for PPG only (safe defaults)
+    - _target_: biosignals.data.transforms.signal_ops.BandpassButter
+      low_hz: 0.5
+      high_hz: 8.0
+      order: 4
+      modalities: [${transforms.primary_raw}]
+      default_fs: 100.0
+
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+
+    # Make it compatible with single-modality backbones expecting "main"
+    - _target_: biosignals.data.transforms.base.RenameModality
+      src: ${transforms.primary_raw}
+      dst: ${transforms.primary_model}
+      drop_src: true
+
+    - _target_: biosignals.data.transforms.signal_ops.RandomCrop
+      window_size: ${transforms.window_size}
+
+val:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+
+    - _target_: biosignals.data.transforms.resample.ResampleToPrimary
+      primary_modality: ${transforms.primary_raw}
+      match_length: primary
+      default_fs: 100.0
+
+    - _target_: biosignals.data.transforms.signal_ops.BandpassButter
+      low_hz: 0.5
+      high_hz: 8.0
+      order: 4
+      modalities: [${transforms.primary_raw}]
+      default_fs: 100.0
+
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+
+    - _target_: biosignals.data.transforms.base.RenameModality
+      src: ${transforms.primary_raw}
+      dst: ${transforms.primary_model}
+      drop_src: true
+
+    - _target_: biosignals.data.transforms.signal_ops.CenterCrop
+      window_size: ${transforms.window_size}

@@ -1,0 +1,39 @@
+# @package transforms
+
+window_size: 4096
+default_fs: 256.0
+notch_hz: 60.0
+
+train:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+    - _target_: biosignals.data.transforms.signal_ops.BandpassButter
+      low_hz: 1.0
+      high_hz: 40.0
+      order: 4
+      default_fs: ${transforms.default_fs}
+    - _target_: biosignals.data.transforms.signal_ops.NotchFilter
+      freq_hz: ${transforms.notch_hz}
+      q: 30.0
+      default_fs: ${transforms.default_fs}
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+    - _target_: biosignals.data.transforms.signal_ops.RandomCrop
+      window_size: ${transforms.window_size}
+
+val:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+    - _target_: biosignals.data.transforms.signal_ops.BandpassButter
+      low_hz: 1.0
+      high_hz: 40.0
+      order: 4
+      default_fs: ${transforms.default_fs}
+    - _target_: biosignals.data.transforms.signal_ops.NotchFilter
+      freq_hz: ${transforms.notch_hz}
+      q: 30.0
+      default_fs: ${transforms.default_fs}
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+    - _target_: biosignals.data.transforms.signal_ops.CenterCrop
+      window_size: ${transforms.window_size}

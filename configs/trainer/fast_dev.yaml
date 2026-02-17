@@ -1,0 +1,7 @@
+# @package trainer
+defaults:
+  - default
+
+epochs: 2
+log_every: 1
+save_best: false

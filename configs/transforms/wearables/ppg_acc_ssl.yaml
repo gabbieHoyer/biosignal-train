@@ -1,0 +1,79 @@
+# @package transforms
+
+window_size: 2048
+primary_raw: ppg
+primary_model: main
+
+train:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+
+    - _target_: biosignals.data.transforms.resample.ResampleToPrimary
+      primary_modality: ${transforms.primary_raw}
+      match_length: primary
+      default_fs: 100.0
+
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+
+    - _target_: biosignals.data.transforms.base.RenameModality
+      src: ${transforms.primary_raw}
+      dst: ${transforms.primary_model}
+      drop_src: true
+
+    - _target_: biosignals.data.transforms.signal_ops.RandomCrop
+      window_size: ${transforms.window_size}
+
+    # Augmentations (numpy, sample-level)
+    - _target_: biosignals.data.transforms.aug.RandomGaussianNoise
+      sigma: 0.01
+      p: 0.5
+    - _target_: biosignals.data.transforms.aug.RandomScale
+      min_scale: 0.9
+      max_scale: 1.1
+      per_channel: true
+      p: 0.5
+    - _target_: biosignals.data.transforms.aug.RandomTimeShift
+      max_shift: 25
+      p: 0.3
+      mode: constant
+      fill_value: 0.0
+    - _target_: biosignals.data.transforms.aug.RandomChannelDropout
+      drop_prob: 0.1
+      p: 0.2
+      drop_value: 0.0
+
+    # Generate SSL time mask in meta (do NOT apply here)
+    - _target_: biosignals.data.transforms.aug.BernoulliTimeMask
+      mask_ratio: ${task.mask_ratio}
+      p: 1.0
+      apply: false
+      meta_key: ssl_mask
+      primary_modality: ${transforms.primary_model}
+
+val:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+
+    - _target_: biosignals.data.transforms.resample.ResampleToPrimary
+      primary_modality: ${transforms.primary_raw}
+      match_length: primary
+      default_fs: 100.0
+
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+
+    - _target_: biosignals.data.transforms.base.RenameModality
+      src: ${transforms.primary_raw}
+      dst: ${transforms.primary_model}
+      drop_src: true
+
+    - _target_: biosignals.data.transforms.signal_ops.CenterCrop
+      window_size: ${transforms.window_size}
+
+    - _target_: biosignals.data.transforms.aug.DeterministicBernoulliTimeMask
+      mask_ratio: ${task.mask_ratio}
+      apply: false
+      meta_key: ssl_mask
+      seed_key: id
+      primary_modality: ${transforms.primary_model}

@@ -1,0 +1,15 @@
+# @package model
+
+_target_: biosignals.models.architectures.transformer1d.Transformer1DClassifier
+in_channels: 12
+num_classes: 5
+
+embed_dim: 256
+depth: 6
+num_heads: 8
+mlp_ratio: 4.0
+dropout: 0.1
+
+patch_size: 50
+patch_stride: 50
+primary_modality: main

@@ -1,0 +1,19 @@
+# @package model
+
+_target_: biosignals.models.architectures.perceiver_fusion.PerceiverFusionClassifier
+modalities: ["ecg", "ppg", "acc"]
+in_channels:
+  ecg: 12
+  ppg: 1
+  acc: 3
+patch_size:
+  ecg: 50
+  ppg: 25
+  acc: 10
+num_classes: 5
+embed_dim: 256
+num_latents: 64
+depth: 4
+num_heads: 8
+mlp_ratio: 4.0
+dropout: 0.1

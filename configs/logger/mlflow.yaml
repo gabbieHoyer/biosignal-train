@@ -1,0 +1,8 @@
+# @package logger
+_target_: biosignals.loggers.mlflow.MLflowLogger
+
+experiment_name: biosignals
+run_name: ${hydra:job.name}-${now:%Y%m%d_%H%M%S}
+
+tracking_uri: file:${hydra:runtime.output_dir}/mlruns
+tags: null

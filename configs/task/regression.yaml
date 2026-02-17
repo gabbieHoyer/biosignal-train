@@ -1,0 +1,4 @@
+# @package task
+
+_target_: biosignals.tasks.regression.RegressionTask
+primary_modality: main

@@ -1,0 +1,7 @@
+# @package task
+
+_target_: biosignals.tasks.segmentation.SegmentationTask
+num_classes: 4
+multilabel: false
+ignore_index: 255
+primary_modality: main

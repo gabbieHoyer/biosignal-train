@@ -1,0 +1,25 @@
+# @package trainer
+_target_: biosignals.engine.trainer.TrainerConfig
+
+epochs: 20
+lr: 3e-4
+amp: true
+grad_clip: 1.0
+log_every: 50
+
+# run dir is injected by train.py (trainer_cfg.output_dir = hydra output dir)
+output_dir: "."
+
+ckpt_dir: checkpoints
+metrics_file: metrics.jsonl
+summary_file: summary.json
+
+save_last: true
+save_best: true
+save_every: 1
+
+monitor_metric: auto
+monitor_mode: auto
+
+log_cache: true
+cache_scan_every: 1

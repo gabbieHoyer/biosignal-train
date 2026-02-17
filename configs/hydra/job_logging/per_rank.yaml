@@ -1,0 +1,25 @@
+# configs/hydra/job_logging/per_rank.yaml
+# @package hydra.job_logging
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  simple:
+    format: "[%(asctime)s][%(name)s][%(levelname)s] - %(message)s"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: simple
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.FileHandler
+    formatter: simple
+    filename: ${hydra.runtime.output_dir}/run_r${oc.env:RANK,0}.log
+    mode: a
+
+root:
+  level: INFO
+  handlers: [console, file]

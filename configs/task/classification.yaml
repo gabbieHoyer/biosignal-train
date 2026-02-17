@@ -1,0 +1,10 @@
+# @package task
+
+_target_: biosignals.tasks.classification.ClassificationTask
+name: classification
+primary_modality: main
+num_classes: 5
+multilabel: true
+threshold: 0.5
+
+

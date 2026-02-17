@@ -1,0 +1,12 @@
+# @package task
+
+_target_: biosignals.tasks.detection.DetectionTask
+name: detection
+primary_modality: main
+
+threshold: 0.5
+tolerance_sec: 0.25
+min_event_sec: 0.05
+
+
+# -------------------------

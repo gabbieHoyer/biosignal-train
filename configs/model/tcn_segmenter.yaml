@@ -1,0 +1,8 @@
+# @package model
+
+_target_: biosignals.models.architectures.tcn_segmenter.TCNSegmenter
+in_channels: 1
+num_classes: 4
+width: 128
+depth: 4
+primary_modality: main

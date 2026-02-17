@@ -1,0 +1,161 @@
+############################################
+# Hydra (common defaults)
+############################################
+outputs/
+multirun/
+
+############################################
+# Weights & Biases
+############################################
+wandb/
+wandb-debug.log
+wandb-debug-internal.log
+
+############################################
+# MLflow
+############################################
+mlruns/
+mlartifacts/
+
+############################################
+# TensorBoard / profiling
+############################################
+events.out.tfevents.*
+*.tfevents.*
+*.pb
+*.prof
+*.trace
+*.chrome-trace
+*.pt.trace.json
+
+############################################
+# PyTorch / training artifacts
+############################################
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.torchscript
+*.jit
+*.trt
+
+# Large arrays / datasets / caches
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.joblib
+*.parquet
+*.feather
+*.arrow
+*.zarr
+*.zarr.zip
+*.lmdb
+*.sqlite
+*.db
+
+############################################
+# Python
+############################################
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.*
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+*.log
+
+############################################
+# Jupyter / IPython
+############################################
+.ipynb_checkpoints/
+.profile_default/
+.ipython/
+*.ipynb
+
+############################################
+# Type checking / linters
+############################################
+.mypy_cache/
+.pytype/
+.pyre/
+.ruff_cache/
+
+############################################
+# C extensions
+############################################
+*.so
+*.dylib
+*.dll
+*.pyd
+
+############################################
+# OS / Editor
+############################################
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+############################################
+# Credentials / keys
+############################################
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+credentials/
+.aws/
+.gcp/
+.kube/
+
+############################################
+# Project-specific
+############################################
+temp/
+data/
+outputs/
+wandb/
+mlruns/
+lightning_logs/
+runs/
+checkpoints/
+checkpoints**/
+artifacts/
+logs/
+tb_logs/
+tensorboard/
+results/
+reports/
+debug/
+cache/
+tmp/

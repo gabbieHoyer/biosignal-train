@@ -1,0 +1,14 @@
+# @package dataset
+
+train:
+  _target_: biosignals.data.datasets.ppg_acc_parquet.PpgAccParquetDataset
+  root: ${oc.env:DATA_DIR,./data}/ppg_acc_parquet
+  split: train
+  # Avoid caching if you use random augmentations/crops
+  cache_dir: null
+
+val:
+  _target_: biosignals.data.datasets.ppg_acc_parquet.PpgAccParquetDataset
+  root: ${oc.env:DATA_DIR,./data}/ppg_acc_parquet
+  split: val
+  cache_dir: ${oc.env:CACHE_DIR,./cache}/ppg_acc/val

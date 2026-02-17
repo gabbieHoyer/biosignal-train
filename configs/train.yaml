@@ -1,0 +1,26 @@
+defaults:
+  - dataset: ecg_npz
+  - task: classification
+  - model: resnet1d
+  - transforms: ecg/basic
+  - trainer: default
+  - logger: wandb
+  - experiment: null
+  - _self_
+  - override hydra/job_logging: per_rank
+
+dist:
+  backend: nccl
+
+data:
+  _target_: biosignals.data.datamodule.DataConfig
+  batch_size: 64
+  num_workers: 8
+  pin_memory: true
+
+logging:
+  level: INFO
+
+seed: 42
+
+

@@ -1,0 +1,24 @@
+# @package model
+
+_target_: biosignals.models.architectures.multimodal_fusion.LateFusionClassifier
+emb_dim: 256
+num_classes: 5
+fusion_hidden: 512
+dropout: 0.1
+
+encoders:
+  ecg:
+    _target_: biosignals.models.backbones.conv1d.ConvEncoder1D
+    in_channels: 12
+    emb_dim: 256
+    depth: 4
+  ppg:
+    _target_: biosignals.models.backbones.conv1d.ConvEncoder1D
+    in_channels: 1
+    emb_dim: 256
+    depth: 4
+  acc:
+    _target_: biosignals.models.backbones.conv1d.ConvEncoder1D
+    in_channels: 3
+    emb_dim: 256
+    depth: 4

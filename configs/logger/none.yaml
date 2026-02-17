@@ -1,0 +1,2 @@
+# @package logger
+_target_: biosignals.loggers.base.NoopLogger

@@ -1,0 +1,53 @@
+# @package transforms
+
+window_size: 2048
+
+train:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+    - _target_: biosignals.data.transforms.signal_ops.RandomCrop
+      window_size: ${transforms.window_size}
+
+    # Mild signal augs (optional, tune per dataset)
+    - _target_: biosignals.data.transforms.aug.RandomGaussianNoise
+      sigma: 0.01
+      p: 0.5
+    - _target_: biosignals.data.transforms.aug.RandomScale
+      min_scale: 0.9
+      max_scale: 1.1
+      per_channel: true
+      p: 0.5
+    - _target_: biosignals.data.transforms.aug.RandomTimeShift
+      max_shift: 25
+      p: 0.3
+      mode: constant
+      fill_value: 0.0
+    - _target_: biosignals.data.transforms.aug.RandomChannelDropout
+      drop_prob: 0.1
+      p: 0.2
+      drop_value: 0.0
+
+    # Generate SSL mask (do NOT apply here; the SSL task will apply)
+    - _target_: biosignals.data.transforms.aug.BernoulliTimeMask
+      mask_ratio: ${task.mask_ratio}
+      p: 1.0
+      apply: false
+      meta_key: ssl_mask
+
+val:
+  _target_: biosignals.data.transforms.compose.Compose
+  transforms:
+    - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
+    - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
+    - _target_: biosignals.data.transforms.signal_ops.CenterCrop
+      window_size: ${transforms.window_size}
+
+    # Deterministic mask for stable SSL validation
+    - _target_: biosignals.data.transforms.aug.DeterministicBernoulliTimeMask
+      mask_ratio: ${task.mask_ratio}
+      apply: false
+      meta_key: ssl_mask
+      seed_key: id
+

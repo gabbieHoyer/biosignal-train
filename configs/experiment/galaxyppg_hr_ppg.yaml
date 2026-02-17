@@ -1,0 +1,27 @@
+# @package _global_
+
+defaults:
+  - override /dataset: galaxyppg
+  - override /task: regression
+  - override /transforms: galaxyppg/hr_ppg
+  - override /model: encoder_classifier
+  - override /trainer: fast_dev
+  - _self_
+
+# match your CLI overrides
+model:
+  in_channels: 1
+  num_classes: 1
+
+dataset:
+  train:
+    modalities: ["ppg"]
+  val:
+    modalities: ["ppg"]
+
+data:
+  num_workers: 0
+
+trainer:
+  monitor_metric: val/loss
+  monitor_mode: min
