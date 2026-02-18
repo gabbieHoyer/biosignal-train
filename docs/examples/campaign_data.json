@@ -14,11 +14,11 @@
       "healthy"
     ],
     "best_value": 130.30564880371094,
-    "best_run_dir": "/mnt/nfs/rad/data/msk_infocommons/Users/ghoyer/multi/biosignals/biosignal-train/outputs/2026-02-18/00-32-18"
+    "best_run_dir": "/multi/biosignals/biosignal-train/outputs/2026-02-18/00-32-18"
   },
   "runs": [
     {
-      "run_dir": "/mnt/nfs/rad/data/msk_infocommons/Users/ghoyer/multi/biosignals/biosignal-train/outputs/2026-02-18/00-22-08",
+      "run_dir": "/multi/biosignals/biosignal-train/outputs/2026-02-18/00-22-08",
       "task": "RegressionTask",
       "model": "EncoderClassifier",
       "dataset": "WindowedNpzDataset",
@@ -60,7 +60,7 @@
       }
     },
     {
-      "run_dir": "/mnt/nfs/rad/data/msk_infocommons/Users/ghoyer/multi/biosignals/biosignal-train/outputs/2026-02-18/00-26-05",
+      "run_dir": "/multi/biosignals/biosignal-train/outputs/2026-02-18/00-26-05",
       "task": "RegressionTask",
       "model": "EncoderClassifier",
       "dataset": "WindowedNpzDataset",
@@ -119,7 +119,7 @@
       }
     },
     {
-      "run_dir": "/mnt/nfs/rad/data/msk_infocommons/Users/ghoyer/multi/biosignals/biosignal-train/outputs/2026-02-18/00-32-18",
+      "run_dir": "/multi/biosignals/biosignal-train/outputs/2026-02-18/00-32-18",
       "task": "RegressionTask",
       "model": "DeepEncoderClassifier",
       "dataset": "WindowedNpzDataset",
