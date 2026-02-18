@@ -1,0 +1,183 @@
+{
+  "meta": {
+    "generated_at": "2026-02-18T00:38:44.582387",
+    "goal": "Minimize val/mae for HR regression on GalaxyPPG. Start with experiment=galaxyppg_hr_ppg. Budget: 3 runs.",
+    "agent_summary": "{'best_model': 'DeepEncoderClassifier', 'best_config': 'experiment=galaxyppg_hr_ppg model=deep_encoder_classifier trainer.epochs=6', 'best_val_mae': 7.9, 'improvement_from_baseline': '84.8%', 'runs_used': '3/3', 'recommendation': 'continue with deeper models and more epochs'}",
+    "n_runs": 3
+  },
+  "drift": {
+    "detected": false,
+    "stagnation": false,
+    "recommendation": "continue",
+    "trend_slope": -1428.3432693481445,
+    "reasons": [
+      "healthy"
+    ],
+    "best_value": 130.30564880371094,
+    "best_run_dir": "/mnt/nfs/rad/data/msk_infocommons/Users/ghoyer/multi/biosignals/biosignal-train/outputs/2026-02-18/00-32-18"
+  },
+  "runs": [
+    {
+      "run_dir": "/mnt/nfs/rad/data/msk_infocommons/Users/ghoyer/multi/biosignals/biosignal-train/outputs/2026-02-18/00-22-08",
+      "task": "RegressionTask",
+      "model": "EncoderClassifier",
+      "dataset": "WindowedNpzDataset",
+      "lr": 0.0003,
+      "epochs_configured": 2,
+      "epochs_completed": 2,
+      "best_value": 2986.9921875,
+      "best_epoch": null,
+      "final_value": 2986.9921875,
+      "monitor_metric": "val/loss",
+      "monitor_mode": "min",
+      "converged": false,
+      "failed": false,
+      "overrides": [
+        "experiment=galaxyppg_hr_ppg"
+      ],
+      "timestamp": "2026-02-18T00:25:42.017228",
+      "training_curve": [
+        {
+          "epoch": 0,
+          "value": 5479.298828
+        },
+        {
+          "epoch": 1,
+          "value": 2986.992188
+        }
+      ],
+      "final_train_metrics": {
+        "loss": 3958.500488,
+        "mae": 59.848751,
+        "r2": -7.893136,
+        "rmse": 62.548149
+      },
+      "final_val_metrics": {
+        "loss": 2986.992188,
+        "mae": 51.960274,
+        "r2": -165.039993,
+        "rmse": 52.620155
+      }
+    },
+    {
+      "run_dir": "/mnt/nfs/rad/data/msk_infocommons/Users/ghoyer/multi/biosignals/biosignal-train/outputs/2026-02-18/00-26-05",
+      "task": "RegressionTask",
+      "model": "EncoderClassifier",
+      "dataset": "WindowedNpzDataset",
+      "lr": 0.0003,
+      "epochs_configured": 6,
+      "epochs_completed": 6,
+      "best_value": 250.6455078125,
+      "best_epoch": null,
+      "final_value": 250.6455078125,
+      "monitor_metric": "val/loss",
+      "monitor_mode": "min",
+      "converged": false,
+      "failed": false,
+      "overrides": [
+        "experiment=galaxyppg_hr_ppg",
+        "trainer.epochs=6"
+      ],
+      "timestamp": "2026-02-18T00:32:03.505843",
+      "training_curve": [
+        {
+          "epoch": 0,
+          "value": 5479.298828
+        },
+        {
+          "epoch": 1,
+          "value": 2986.992188
+        },
+        {
+          "epoch": 2,
+          "value": 938.936279
+        },
+        {
+          "epoch": 3,
+          "value": 391.966064
+        },
+        {
+          "epoch": 4,
+          "value": 365.158142
+        },
+        {
+          "epoch": 5,
+          "value": 250.645508
+        }
+      ],
+      "final_train_metrics": {
+        "loss": 232.589539,
+        "mae": 9.978489,
+        "r2": 0.511544,
+        "rmse": 14.983369
+      },
+      "final_val_metrics": {
+        "loss": 250.645508,
+        "mae": 10.472399,
+        "r2": -7.87747,
+        "rmse": 12.418749
+      }
+    },
+    {
+      "run_dir": "/mnt/nfs/rad/data/msk_infocommons/Users/ghoyer/multi/biosignals/biosignal-train/outputs/2026-02-18/00-32-18",
+      "task": "RegressionTask",
+      "model": "DeepEncoderClassifier",
+      "dataset": "WindowedNpzDataset",
+      "lr": 0.0003,
+      "epochs_configured": 6,
+      "epochs_completed": 6,
+      "best_value": 130.30564880371094,
+      "best_epoch": null,
+      "final_value": 130.30564880371094,
+      "monitor_metric": "val/loss",
+      "monitor_mode": "min",
+      "converged": false,
+      "failed": false,
+      "overrides": [
+        "experiment=galaxyppg_hr_ppg",
+        "model=deep_encoder_classifier",
+        "trainer.epochs=6"
+      ],
+      "timestamp": "2026-02-18T00:38:17.297909",
+      "training_curve": [
+        {
+          "epoch": 0,
+          "value": 3778.60083
+        },
+        {
+          "epoch": 1,
+          "value": 794.131653
+        },
+        {
+          "epoch": 2,
+          "value": 202.268814
+        },
+        {
+          "epoch": 3,
+          "value": 188.73819
+        },
+        {
+          "epoch": 4,
+          "value": 170.345261
+        },
+        {
+          "epoch": 5,
+          "value": 130.305649
+        }
+      ],
+      "final_train_metrics": {
+        "loss": 124.346054,
+        "mae": 6.937161,
+        "r2": 0.733356,
+        "rmse": 10.808856
+      },
+      "final_val_metrics": {
+        "loss": 130.305649,
+        "mae": 7.901475,
+        "r2": -5.017992,
+        "rmse": 9.897165
+      }
+    }
+  ],
+  "approvals": []
+}
