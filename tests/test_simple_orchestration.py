@@ -31,16 +31,26 @@ def test_agent_builds_without_error():
 
     # smolagents stores tools as a dict {name: Tool}.
     # It also auto-injects a "final_answer" tool, so we expect
-    # our 6 tools + 1 final_answer = 7 total.
+    # our 12 tools + 1 final_answer = 13 total.
     assert isinstance(agent.tools, dict)
     expected_tools = {
+        # Tier 1
+        "list_available_configs",
+        "suggest_search_space",
         "run_training",
         "read_run_results",
         "compare_runs",
         "check_drift",
         "get_experiment_history",
         "read_experiment_config",
-        "final_answer",  # auto-added by smolagents
+        # Tier 2
+        "create_config_variant",
+        "compose_experiment_config",
+        # Tier 3
+        "read_model_source",
+        "register_generated_model",
+        # Auto
+        "final_answer",
     }
     assert set(agent.tools.keys()) == expected_tools
 
@@ -102,7 +112,7 @@ if __name__ == "__main__":
     print(f"  Agent created: {type(agent).__name__}")
     # agent.tools is a dict {name_str: Tool}, not a list
     print(f"  Tools: {list(agent.tools.keys())}")
-    print(f"  Tool count: {len(agent.tools)} (6 custom + 1 final_answer)")
+    print(f"  Tool count: {len(agent.tools)} (12 custom + 1 final_answer)")
     print("  PASSED\n")
 
     print("=" * 60)
@@ -136,6 +146,3 @@ if __name__ == "__main__":
     print("  PASSED\n")
 
     print("All tests passed.")
-
-    
-# ------------------
