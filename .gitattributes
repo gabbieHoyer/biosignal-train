@@ -1,0 +1,2 @@
+# Keep notebooks tracked, but do not count them in GitHub language stats
+*.ipynb linguist-detectable=false
