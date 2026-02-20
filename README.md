@@ -2,31 +2,33 @@
 
 Training and evaluation code for biosignal machine learning experiments, built around Hydra configs and a small, extensible PyTorch engine. The repo supports reproducible runs, optional DDP via `torchrun`, and both single-signal and multi-modal pipelines (for example PPG + accelerometer), including fusion models and self-supervised pretraining. It also includes a feedback-driven experiment loop (agent + artifact contract) that can run, compare, and adapt experiments across multiple training runs without changing the training engine.
 
-## Feedback-driven experiment loop (agent + artifact contract)
+## Feedback-driven experiment loop
 
-Agent code lives in [`src/biosignals/agent/`](src/biosignals/agent/).
+Agent code lives in [`src/biosignals/agent/`](src/biosignals/agent/). Full documentation: [`docs/agent.md`](docs/agent.md).
 
-The agent orchestrates training by invoking the existing Hydra CLI as a subprocess and then reading a small set of run artifacts to decide what to try next:
+The agent orchestrates training by invoking the existing Hydra CLI as a subprocess, reading run artifacts (`metrics.jsonl`, `summary.json`, `config_resolved.yaml`), and deciding what to try next. It operates in three capability tiers: config-aware discovery, YAML config generation, and AST-validated Python architecture generation.
 
-- `metrics.jsonl` (per-epoch metrics)
-- `summary.json` (best checkpoint + monitor metric summary)
-- `config_resolved.yaml` (the exact resolved Hydra config that ran)
+### Run a campaign
 
-Run a 3-run campaign:
+Campaign goals are defined in [`campaigns/`](campaigns/) as YAML files, one per dataset:
 
-```python
-from biosignals.agent import run_experiment_loop
+```bash
+# List all available campaign goals
+python -m biosignals.agent.run --list
 
-result = run_experiment_loop(
-    goal=(
-        "Minimize val/mae for HR regression on GalaxyPPG. "
-        "Start with experiment=galaxyppg_hr_ppg as baseline. "
-        "Budget: 3 runs."
-    ),
-    budget=3,
-)
-print(result)
+# Run a named goal
+python -m biosignals.agent.run galaxyppg:hr_baseline
+python -m biosignals.agent.run mitbih:aami3_optimize --budget 5
+
+# Interactive human-in-the-loop approval
+python -m biosignals.agent.run mitbih:aami3_baseline --approval terminal
+
+# Inline goal (no campaign file needed)
+python -m biosignals.agent.run --goal "Minimize val/mae on GalaxyPPG. Budget: 3." --budget 3
 ```
+
+A campaign dashboard (standalone HTML with charts and metrics) is generated automatically after each run. See [`docs/examples/`](docs/examples/) for sample output.
+
 
 ## What's inside
 
@@ -44,6 +46,7 @@ print(result)
   - `configs/train.yaml` top-level training config
   - `configs/experiment/` runnable experiment presets (MIT-BIH, GalaxyPPG)
   - `configs/model/`, `configs/task/`, `configs/dataset/`, `configs/transforms/`, `configs/logger/`
+- `campaigns/` agent campaign goals (one YAML per dataset, see [`campaigns/README.md`](campaigns/README.md))
 - `src/biosignals/` library code:
   - `cli/` train and eval entrypoints
   - `engine/` trainer and loops

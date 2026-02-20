@@ -1,0 +1,88 @@
+# campaigns/mitbih.yaml
+# ─────────────────────────────────────────────────
+# Campaign goals for MIT-BIH Arrhythmia Database
+# ─────────────────────────────────────────────────
+#
+# AAMI-3 classification: Normal (N), Supraventricular (S), Ventricular (V)
+# 2-lead ECG, multiclass (not multilabel), 3 classes
+# Monitor metric: val/acc (higher is better)
+#
+# Usage:
+#   python -m biosignals.agent.run mitbih:aami3_baseline
+#   python -m biosignals.agent.run mitbih:aami3_optimize
+
+dataset: mitbih
+description: >
+  MIT-BIH Arrhythmia Database with AAMI-3 grouping (N/S/V).
+  2-lead ECG classification task. Highly imbalanced classes
+  (N >> S > V). Monitor metric: val/acc (higher is better).
+  Baseline experiment: mitbih_aami3_cnn.
+
+goals:
+  # ── Quick baseline ──────────────────────────────
+  aami3_baseline:
+    description: "Fast baseline for AAMI-3 arrhythmia classification"
+    goal: |
+      Maximize val/acc for AAMI-3 arrhythmia classification on MIT-BIH.
+      This is a 3-class problem: Normal (N), Supraventricular (S), Ventricular (V).
+      The dataset uses 2-lead ECG signals.
+      Start with experiment=mitbih_aami3_cnn as baseline (uses fast_dev trainer).
+      After baseline, try increasing epochs to 10-20 and tuning learning rate.
+      Note: classes are imbalanced (N is dominant) — watch for the model
+      just predicting N for everything.
+      Budget: 3 runs. Target: val/acc > 0.85.
+    budget: 3
+    max_steps: 30
+    baseline_experiment: mitbih_aami3_cnn
+    target_metric: val/acc
+    target_value: 0.85
+    target_direction: max
+    tags: [baseline, quick, classification, ecg]
+
+  # ── Standard optimization ───────────────────────
+  aami3_optimize:
+    description: "Systematic optimization for AAMI-3 classification"
+    goal: |
+      Maximize val/acc for AAMI-3 arrhythmia classification on MIT-BIH.
+      3-class ECG classification: Normal (N), Supraventricular (S), Ventricular (V).
+      2-lead ECG input (in_channels=2, num_classes=3).
+      Start with experiment=mitbih_aami3_cnn as baseline.
+      Systematically explore:
+        - Learning rates: try 0.0001, 0.0005, 0.001, 0.003
+        - Epochs: try 10, 20, 30
+        - Available model architectures (list_available_configs to see options)
+      Use suggest_search_space() after each run for data-driven next steps.
+      IMPORTANT: This is a classification task — monitor_metric is val/acc
+      and monitor_mode is max (higher is better). Any model configs you create
+      must set in_channels=2 and num_classes=3.
+      Budget: 5 runs. Target: val/acc > 0.90.
+    budget: 5
+    max_steps: 45
+    baseline_experiment: mitbih_aami3_cnn
+    target_metric: val/acc
+    target_value: 0.90
+    target_direction: max
+    tags: [optimization, hp-search, classification, ecg]
+
+  # ── Deep exploration ────────────────────────────
+  aami3_deep:
+    description: "Full exploration with architecture search for ECG classification"
+    goal: |
+      Maximize val/acc for AAMI-3 arrhythmia classification on MIT-BIH.
+      3-class ECG classification with 2-lead input.
+      Start with experiment=mitbih_aami3_cnn.
+      After exploring hyperparameters and existing models, consider:
+        - The class imbalance problem (N >> S > V)
+        - Whether a different architecture handles ECG morphology better
+        - Using read_model_source() + register_generated_model() to create
+          architectures tailored for ECG (e.g., wider initial conv for capturing
+          QRS complex features, or multi-scale temporal analysis)
+      All generated models must use in_channels=2, num_classes=3.
+      Budget: 8 runs. Target: val/acc > 0.93.
+    budget: 8
+    max_steps: 60
+    baseline_experiment: mitbih_aami3_cnn
+    target_metric: val/acc
+    target_value: 0.93
+    target_direction: max
+    tags: [deep, architecture-search, tier3, classification, ecg]

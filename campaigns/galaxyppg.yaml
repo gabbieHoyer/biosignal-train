@@ -1,0 +1,71 @@
+# campaigns/galaxyppg.yaml
+# ─────────────────────────────────────────────────
+# Campaign goals for GalaxyPPG PPG-based heart rate regression
+# ─────────────────────────────────────────────────
+#
+# Each goal defines what the agent should optimize, with what budget,
+# and starting from which baseline experiment config.
+#
+# Usage:
+#   python -m biosignals.agent.run galaxyppg:hr_baseline
+#   python -m biosignals.agent.run galaxyppg:hr_deep --budget 10
+
+dataset: galaxyppg
+description: >
+  Samsung Galaxy Watch PPG dataset. Primary task is heart rate (HR)
+  regression from photoplethysmography signals. Single modality (ppg),
+  continuous target. Monitor metric: val/mae (lower is better).
+
+goals:
+  # ── Quick baseline ──────────────────────────────
+  hr_baseline:
+    description: "Fast baseline for HR regression — verify pipeline works"
+    goal: |
+      Minimize val/mae for heart rate regression on the GalaxyPPG dataset.
+      Start with experiment=galaxyppg_hr_ppg as baseline (uses fast_dev trainer).
+      After baseline, try increasing epochs to 10 and tuning learning rate.
+      Budget: 3 runs. Target: val/mae < 15.
+    budget: 3
+    max_steps: 30
+    baseline_experiment: galaxyppg_hr_ppg
+    target_metric: val/mae
+    target_value: 15.0
+    target_direction: min
+    tags: [baseline, quick, regression]
+
+  # ── Standard optimization ───────────────────────
+  hr_optimize:
+    description: "Systematic HP search for HR regression"
+    goal: |
+      Minimize val/mae for heart rate regression on GalaxyPPG.
+      Start with experiment=galaxyppg_hr_ppg as baseline.
+      Systematically explore: learning rates (0.0001-0.01), epoch counts (10-30),
+      and available model architectures. Use suggest_search_space() after each run.
+      Budget: 5 runs. Target: val/mae < 8.
+    budget: 5
+    max_steps: 45
+    baseline_experiment: galaxyppg_hr_ppg
+    target_metric: val/mae
+    target_value: 8.0
+    target_direction: min
+    tags: [optimization, hp-search, regression]
+
+  # ── Deep exploration with architecture search ───
+  hr_deep:
+    description: "Full exploration including Tier 3 architecture generation"
+    goal: |
+      Minimize val/mae for heart rate regression on GalaxyPPG.
+      Start with experiment=galaxyppg_hr_ppg as baseline.
+      After exploring existing models and hyperparameters, if drift detection
+      suggests changing the model architecture:
+        1. Read model source with read_model_source()
+        2. Design a deeper/wider variant with register_generated_model()
+        3. Test it with run_training()
+      Budget: 8 runs. Target: val/mae < 5.
+    budget: 8
+    max_steps: 60
+    baseline_experiment: galaxyppg_hr_ppg
+    target_metric: val/mae
+    target_value: 5.0
+    target_direction: min
+    tags: [deep, architecture-search, tier3, regression]
