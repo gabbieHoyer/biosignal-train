@@ -4,10 +4,12 @@ train:
   _target_: biosignals.data.datasets.ecg_npz.EcgNpZDataset
   root: ${oc.env:DATA_DIR,./data}/ptbxl_npz
   split: train
-  cache_dir: ${oc.env:CACHE_DIR,./cache}/ptbxl/train
 
 val:
   _target_: biosignals.data.datasets.ecg_npz.EcgNpZDataset
   root: ${oc.env:DATA_DIR,./data}/ptbxl_npz
   split: val
-  cache_dir: ${oc.env:CACHE_DIR,./cache}/ptbxl/val
+
+cache:
+  train: null
+  val: ${oc.env:CACHE_DIR,./cache}/ptbxl/val
