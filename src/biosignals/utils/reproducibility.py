@@ -9,8 +9,8 @@ import numpy as np
 
 try:
     import torch
-except Exception:  # pragma: no cover
-    torch = None  # type: ignore
+except Exception:
+    torch = None
 
 
 def seed_everything(seed: int, deterministic: bool = True) -> int:

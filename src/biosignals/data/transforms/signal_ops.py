@@ -11,10 +11,10 @@ from biosignals.data.types import Sample
 
 try:
     from scipy.signal import butter, iirnotch, sosfiltfilt
-except Exception:  # pragma: no cover
-    butter = None  # type: ignore
-    sosfiltfilt = None  # type: ignore
-    iirnotch = None  # type: ignore
+except Exception:
+    butter = None
+    sosfiltfilt = None
+    iirnotch = None
 
 
 def _resolve_modalities(sample: Sample, modalities: Optional[Sequence[str]]) -> Sequence[str]:
@@ -179,6 +179,6 @@ class NotchFilter:
         return Sample(signals=out, targets=sample.targets, meta=sample.meta)
 
 
-# # You’ll have dataset-specific configs picking the right transforms
+# # dataset-specific configs pick desired transforms
 # #  (e.g., bandpass for ECG/PPG, notch for EEG, motion magnitude features, etc.)
 # #  without changing training code.

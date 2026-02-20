@@ -93,7 +93,7 @@ def main(cfg: DictConfig) -> None:
         exp_logger = NoopLogger()
         if "logger" in cfg and cfg.logger is not None and is_main_process():
             exp_logger = instantiate(cfg.logger)
-            exp_logger.log_hparams(OmegaConf.to_container(cfg, resolve=True))  # type: ignore[arg-type]
+            exp_logger.log_hparams(OmegaConf.to_container(cfg, resolve=True))
 
         # Build loaders
         train_loader, val_loader = make_train_val_loaders(

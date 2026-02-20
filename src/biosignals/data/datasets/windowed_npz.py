@@ -14,8 +14,8 @@ from biosignals.data.types import Sample
 
 try:
     import pandas as pd
-except Exception:  # pragma: no cover
-    pd = None  # type: ignore
+except Exception:
+    pd = None
 
 
 def _as_ct(x: np.ndarray, name: str) -> np.ndarray:

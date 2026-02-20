@@ -6,19 +6,18 @@ No API key needed.
 Run:
     PYTHONPATH=$PWD/src python -m pytest tests/test_campaigns.py -v
 """
+
 import textwrap
-from pathlib import Path
 
 import pytest
 
 from biosignals.agent.campaigns import (
     CampaignGoal,
+    _load_campaign_file,
+    list_campaigns,
     load_goal,
     load_goal_from_inline,
-    list_campaigns,
-    _load_campaign_file,
 )
-
 
 # ─────────────────────────────────────────────────
 # Fixtures
@@ -32,7 +31,8 @@ def campaigns_dir(tmp_path):
     camp_dir.mkdir()
 
     # Write galaxyppg campaign
-    (camp_dir / "galaxyppg.yaml").write_text(textwrap.dedent("""\
+    (camp_dir / "galaxyppg.yaml").write_text(
+        textwrap.dedent("""\
         dataset: galaxyppg
         description: "Galaxy PPG heart rate dataset"
 
@@ -62,10 +62,12 @@ def campaigns_dir(tmp_path):
             target_value: 5.0
             target_direction: min
             tags: [deep, tier3]
-    """))
+    """)
+    )
 
     # Write mitbih campaign
-    (camp_dir / "mitbih.yaml").write_text(textwrap.dedent("""\
+    (camp_dir / "mitbih.yaml").write_text(
+        textwrap.dedent("""\
         dataset: mitbih
         description: "MIT-BIH arrhythmia database"
 
@@ -95,7 +97,8 @@ def campaigns_dir(tmp_path):
             target_value: 0.90
             target_direction: max
             tags: [optimization, classification]
-    """))
+    """)
+    )
 
     return camp_dir
 
@@ -108,8 +111,12 @@ def campaigns_dir(tmp_path):
 class TestCampaignGoal:
     def test_to_run_kwargs(self):
         goal = CampaignGoal(
-            dataset="test", goal_name="g1", ref="test:g1",
-            goal="Do something", budget=3, max_steps=30,
+            dataset="test",
+            goal_name="g1",
+            ref="test:g1",
+            goal="Do something",
+            budget=3,
+            max_steps=30,
         )
         kwargs = goal.to_run_kwargs()
         assert kwargs["goal"] == "Do something"
@@ -118,11 +125,17 @@ class TestCampaignGoal:
 
     def test_summary(self):
         goal = CampaignGoal(
-            dataset="mitbih", goal_name="aami3", ref="mitbih:aami3",
-            goal="Maximize val/acc", budget=5, max_steps=45,
+            dataset="mitbih",
+            goal_name="aami3",
+            ref="mitbih:aami3",
+            goal="Maximize val/acc",
+            budget=5,
+            max_steps=45,
             description="Classification baseline",
-            target_metric="val/acc", target_value=0.85,
-            target_direction="max", tags=["baseline"],
+            target_metric="val/acc",
+            target_value=0.85,
+            target_direction="max",
+            tags=["baseline"],
         )
         s = goal.summary()
         assert "mitbih:aami3" in s
@@ -269,8 +282,6 @@ class TestCampaignValidation:
     def test_empty_goal_text(self, campaigns_dir):
         # Add a goal with empty text
         p = campaigns_dir / "broken.yaml"
-        p.write_text(
-            "dataset: broken\ngoals:\n  empty:\n    goal: ''\n    budget: 1\n"
-        )
+        p.write_text("dataset: broken\ngoals:\n  empty:\n    goal: ''\n    budget: 1\n")
         with pytest.raises(ValueError, match="empty goal text"):
             load_goal("broken:empty", campaigns_dir=str(campaigns_dir))

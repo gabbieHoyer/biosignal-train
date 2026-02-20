@@ -153,7 +153,7 @@ def pad_stack_modalities(
             mm = int(pad_to_multiple)
             global_T = int(math.ceil(global_T / mm) * mm)
     else:
-        global_T = None  # type: ignore
+        global_T = None
 
     signals: Dict[str, torch.Tensor] = {}
     lengths: Dict[str, torch.Tensor] = {}
@@ -172,18 +172,3 @@ def pad_stack_modalities(
         masks[m] = mask
 
     return signals, lengths, masks
-
-
-# *** Naming lock-in for the rest of the repo ***- potentially outofdate?
-
-# With this collate setup, I strongly recommend we standardize:
-
-#     - batch.meta["mask"] = valid mask (B,T) for the primary modality
-
-#     - batch.meta["masks"] = dict of modality -> valid mask (B,T) (optional but helpful)
-
-#     - batch.meta["lengths"] = lengths (B,) for primary modality
-
-#     - batch.meta["lengths_by_modality"] = dict of modality -> lengths (B,) (optional)
-
-# Your current pad_stack_ct() already matches “mask = True for valid”.

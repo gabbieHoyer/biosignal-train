@@ -10,11 +10,14 @@ repos:
     rev: v0.6.9
     hooks:
       - id: ruff
-        args: ["--fix"]
+        args: ["--fix", "--unsafe-fixes"]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.11.2
     hooks:
       - id: mypy
+        language_version: python3.10
+        pass_filenames: false
+        args: ["--config-file=pyproject.toml"]
         additional_dependencies: ["types-PyYAML"]

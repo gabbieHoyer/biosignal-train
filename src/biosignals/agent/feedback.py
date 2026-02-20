@@ -51,7 +51,7 @@ def _read_yaml_as_dict(path: Path) -> Dict[str, Any]:
         from omegaconf import OmegaConf
 
         cfg = OmegaConf.load(str(path))
-        return OmegaConf.to_container(cfg, resolve=True)  # type: ignore[return-value]
+        return OmegaConf.to_container(cfg, resolve=True)
     except ImportError:
         import yaml
 
@@ -214,10 +214,7 @@ def parse_run_dir(run_dir: str | Path, overrides: Optional[List[str]] = None) ->
 
     # ── summary.json ──
     summary_path = run_path / "summary.json"
-    if summary_path.exists():
-        summary = _read_json(summary_path)
-    else:
-        summary = {}
+    summary = _read_json(summary_path) if summary_path.exists() else {}
 
     monitor = summary.get("monitor", {})
     best = summary.get("best", {})

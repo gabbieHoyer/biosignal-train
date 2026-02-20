@@ -64,15 +64,26 @@ A campaign dashboard (standalone HTML with charts and metrics) is generated auto
 
 Create an environment with Python 3.10+.
 
+Choose one:
 ```bash
+# Minimal install (runtime deps only)
 pip install -e .
+```
+```bash
+# Dev install (runtime + dev tools)
 pip install -e ".[dev]"
 ```
 
-Optional logger installs:
+Optional feature installs:
 ```bash
+pip install -e ".[agent]"
 pip install -e ".[wandb]"
 pip install -e ".[mlflow]"
+```
+
+Common combo:
+```bash
+pip install -e ".[dev,agent,wandb]"
 ```
 
 ## Quickstart: run an experiment

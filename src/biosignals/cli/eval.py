@@ -35,8 +35,8 @@ from biosignals.utils.reproducibility import seed_everything, set_float32_matmul
 
 try:
     import pandas as pd
-except Exception:  # pragma: no cover
-    pd = None  # type: ignore
+except Exception:
+    pd = None
 
 log = logging.getLogger("biosignals")
 
@@ -62,7 +62,7 @@ def _load_checkpoint_into_model(
         state = ckpt["model"]
     elif isinstance(ckpt, dict) and "state_dict" in ckpt and isinstance(ckpt["state_dict"], dict):
         state = ckpt["state_dict"]
-    elif isinstance(ckpt, dict) and all(isinstance(k, str) for k in ckpt.keys()):
+    elif isinstance(ckpt, dict) and all(isinstance(k, str) for k in ckpt):
         # might already be a state_dict
         state = ckpt
     else:
@@ -271,7 +271,7 @@ def main(cfg: DictConfig) -> None:
         exp_logger = NoopLogger()
         if "logger" in cfg and cfg.logger is not None and is_main_process():
             exp_logger = instantiate(cfg.logger)
-            exp_logger.log_hparams(OmegaConf.to_container(cfg, resolve=True))  # type: ignore[arg-type]
+            exp_logger.log_hparams(OmegaConf.to_container(cfg, resolve=True))
 
         split = str(eval_cfg.get("split", "test"))
         loader = make_split_loader(
@@ -329,10 +329,7 @@ def main(cfg: DictConfig) -> None:
                             model, fit_loader, device=device
                         )
                         fit_g = _ddp_gather_object(fit_pack_local)
-                        if is_distributed():
-                            fit_pack = _merge_gathered(fit_g)  # type: ignore[arg-type]
-                        else:
-                            fit_pack = fit_pack_local
+                        fit_pack = _merge_gathered(fit_g) if is_distributed() else fit_pack_local
 
                         # Fit temperature
                         t_res = fit_temperature(

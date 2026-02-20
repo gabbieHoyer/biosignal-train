@@ -42,19 +42,19 @@ log = logging.getLogger("biosignals.agent")
 
 try:
     from zenml import pipeline, step
-    from zenml.client import Client
+    # from zenml.client import Client
 
     ZENML_AVAILABLE = True
 except ImportError:
     ZENML_AVAILABLE = False
 
     # Provide no-op decorators so the module is importable without ZenML
-    def step(func=None, **kwargs):  # type: ignore[misc]
+    def step(func=None, **kwargs):
         if func is not None:
             return func
         return lambda f: f
 
-    def pipeline(func=None, **kwargs):  # type: ignore[misc]
+    def pipeline(func=None, **kwargs):
         if func is not None:
             return func
         return lambda f: f

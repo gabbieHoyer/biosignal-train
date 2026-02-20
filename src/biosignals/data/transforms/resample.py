@@ -12,8 +12,8 @@ from biosignals.data.types import Sample
 
 try:
     from scipy.signal import resample_poly
-except Exception:  # pragma: no cover
-    resample_poly = None  # type: ignore
+except Exception:
+    resample_poly = None
 
 
 def _copy_meta(meta: Dict[str, Any]) -> Dict[str, Any]:

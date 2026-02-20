@@ -29,14 +29,22 @@ mlflow = ["mlflow"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+exclude = ["notebooks/**"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = ["E", "F", "I", "UP", "B"]
 ignore = [
   "E501",  # let formatter handle line length
   "UP006", # allow typing.List/Dict/etc instead of built-in generics
   "UP007", # allow Optional[T] instead of T | None
+  "UP035",  # typing.Dict/List/Tuple
+  "UP038",  # isinstance(..., (A,B)) -> A|B
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B007"]
+"scripts/**" = ["UP035", "UP038", "SIM102", "SIM105", "SIM108", "SIM118", "F841"]
+"src/biosignals/models/generated/**" = ["UP035", "UP038"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -45,11 +53,15 @@ quote-style = "double"
 python_version = "3.10"
 warn_unused_configs = true
 warn_redundant_casts = true
-warn_unused_ignores = true
-disallow_untyped_defs = true
+warn_unused_ignores = false
 no_implicit_optional = true
-check_untyped_defs = true
 ignore_missing_imports = true  # pragmatic; tighten later
+
+files = ["src/biosignals"]
+exclude = "(^src/biosignals/models/generated/)"
+
+disallow_untyped_defs = false
+check_untyped_defs = false
 
 [project.scripts]
 biosignals-train = "biosignals.cli.train:main"

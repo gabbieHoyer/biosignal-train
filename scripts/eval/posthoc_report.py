@@ -165,7 +165,7 @@ def _load_ckpt_state(path: Path) -> Dict[str, torch.Tensor]:
             return ckpt["state_dict"]
     if isinstance(ckpt, dict):
         # maybe already a state_dict-like mapping
-        return ckpt  # type: ignore[return-value]
+        return ckpt
     raise ValueError(f"Unrecognized checkpoint format at: {path}")
 
 
@@ -368,7 +368,7 @@ def main() -> None:
 
     # Attach eval config node so we can reuse _infer_split
     if "eval" not in cfg:
-        cfg.eval = {}  # type: ignore[attr-defined]
+        cfg.eval = {}
 
     ckpt_path = (
         Path(args.ckpt).expanduser().resolve()
@@ -383,7 +383,7 @@ def main() -> None:
         else:
             raise FileNotFoundError(f"Missing checkpoint at {ckpt_path} and no last.pt found.")
 
-    cfg.eval.ckpt_path = str(ckpt_path)  # type: ignore[attr-defined]
+    cfg.eval.ckpt_path = str(ckpt_path)
 
     device = args.device
     if device.startswith("cuda") and not torch.cuda.is_available():

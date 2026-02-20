@@ -850,16 +850,15 @@ def _validate_no_code_injection(data: Dict[str, Any], path: str = "") -> None:
 
         if isinstance(value, str):
             # Check _target_ fields — must be within project namespace
-            if key == "_target_":
-                if not (
-                    value.startswith("biosignals.")
-                    or value.startswith("torch.")
-                    or value.startswith("torchvision.")
-                ):
-                    raise ConfigSafetyError(
-                        f"Unsafe _target_ at '{full_key}': '{value}'. "
-                        f"Must start with biosignals., torch., or torchvision."
-                    )
+            if key == "_target_" and not (
+                value.startswith("biosignals.")
+                or value.startswith("torch.")
+                or value.startswith("torchvision.")
+            ):
+                raise ConfigSafetyError(
+                    f"Unsafe _target_ at '{full_key}': '{value}'. "
+                    f"Must start with biosignals., torch., or torchvision."
+                )
             # Check all string values for executable patterns
             for pattern in dangerous_patterns:
                 if pattern in value:
@@ -1505,15 +1504,14 @@ def _ast_validate_code(code: str) -> Dict[str, Any]:
                     )
                 imported_modules.append(alias.name)
 
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                root = node.module.split(".")[0]
-                if root not in _ALLOWED_IMPORT_ROOTS:
-                    raise CodeSafetyError(
-                        f"Blocked import: 'from {node.module} import ...'. "
-                        f"Allowed top-level modules: {sorted(_ALLOWED_IMPORT_ROOTS)}"
-                    )
-                imported_modules.append(node.module)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            root = node.module.split(".")[0]
+            if root not in _ALLOWED_IMPORT_ROOTS:
+                raise CodeSafetyError(
+                    f"Blocked import: 'from {node.module} import ...'. "
+                    f"Allowed top-level modules: {sorted(_ALLOWED_IMPORT_ROOTS)}"
+                )
+            imported_modules.append(node.module)
 
     # Step 3: Validate no dangerous calls
     for node in ast.walk(tree):

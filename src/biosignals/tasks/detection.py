@@ -47,7 +47,7 @@ class DetectionTask(Task):
             fs_list = [float(s.meta.get("fs", 1.0)) for s in samples]
 
             y_dense = torch.zeros((len(samples), 1, int(tmax)), dtype=torch.float32)
-            for i, (evts, fs) in enumerate(zip(events_list, fs_list, strict=False)):
+            for i, (evts, _fs) in enumerate(zip(events_list, fs_list, strict=False)):
                 # each event dict expected: {"start": int, "end": int} in sample indices
                 for e in evts:
                     s_idx = int(e["start"])

@@ -34,12 +34,13 @@ Usage:
     from biosignals.agent.orchestrator import run_experiment_loop
     run_experiment_loop(**goal.to_run_kwargs())
 """
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 log = logging.getLogger("biosignals.agent")
 
@@ -54,9 +55,9 @@ class CampaignGoal:
     """
 
     # Identity
-    dataset: str            # e.g., "galaxyppg", "mitbih"
-    goal_name: str          # e.g., "hr_baseline", "aami3_optimize"
-    ref: str                # e.g., "galaxyppg:hr_baseline"
+    dataset: str  # e.g., "galaxyppg", "mitbih"
+    goal_name: str  # e.g., "hr_baseline", "aami3_optimize"
+    ref: str  # e.g., "galaxyppg:hr_baseline"
 
     # Agent prompt (the actual goal text sent to the LLM)
     goal: str
@@ -97,7 +98,8 @@ class CampaignGoal:
             f"  Baseline: {self.baseline_experiment}",
             f"  Budget: {self.budget} runs, max {self.max_steps} agent steps",
             f"  Target: {self.target_metric} {self.target_direction} {self.target_value}"
-            if self.target_value is not None else "",
+            if self.target_value is not None
+            else "",
             f"  Tags: {', '.join(self.tags)}" if self.tags else "",
         ]
         return "\n".join(line for line in lines if line)
@@ -143,7 +145,7 @@ def _load_campaign_file(path: Path) -> Dict[str, Any]:
     """Load and validate a single campaign YAML file."""
     import yaml
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
 
     if "dataset" not in data:
@@ -181,18 +183,20 @@ def list_campaigns(
         dataset_desc = data.get("description", "")
 
         for goal_name, goal_data in data["goals"].items():
-            results.append({
-                "ref": f"{dataset}:{goal_name}",
-                "dataset": dataset,
-                "goal_name": goal_name,
-                "description": goal_data.get("description", ""),
-                "tags": goal_data.get("tags", []),
-                "budget": goal_data.get("budget", 5),
-                "target_metric": goal_data.get("target_metric", ""),
-                "target_direction": goal_data.get("target_direction", ""),
-                "target_value": goal_data.get("target_value"),
-                "dataset_description": dataset_desc,
-            })
+            results.append(
+                {
+                    "ref": f"{dataset}:{goal_name}",
+                    "dataset": dataset,
+                    "goal_name": goal_name,
+                    "description": goal_data.get("description", ""),
+                    "tags": goal_data.get("tags", []),
+                    "budget": goal_data.get("budget", 5),
+                    "target_metric": goal_data.get("target_metric", ""),
+                    "target_direction": goal_data.get("target_direction", ""),
+                    "target_value": goal_data.get("target_value"),
+                    "dataset_description": dataset_desc,
+                }
+            )
 
     return results
 

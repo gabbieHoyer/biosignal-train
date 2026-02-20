@@ -24,11 +24,11 @@ Usage:
         --model anthropic/claude-sonnet-4-20250514 \\
         --dashboard-dir outputs/campaigns/galaxyppg_deep/
 """
+
 from __future__ import annotations
 
 import argparse
 import logging
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -98,17 +98,22 @@ examples:
 
     # Inline goal (backward compat)
     parser.add_argument(
-        "--goal", type=str, default=None,
+        "--goal",
+        type=str,
+        default=None,
         help="Inline goal text (alternative to campaign_ref)",
     )
 
     # Campaign management
     parser.add_argument(
-        "--list", action="store_true",
+        "--list",
+        action="store_true",
         help="List all available campaign goals and exit",
     )
     parser.add_argument(
-        "--campaigns-dir", type=str, default=None,
+        "--campaigns-dir",
+        type=str,
+        default=None,
         help="Path to campaigns/ directory (default: auto-detect)",
     )
 
@@ -116,22 +121,29 @@ examples:
     parser.add_argument("--budget", type=int, default=None, help="Override run budget")
     parser.add_argument("--max-steps", type=int, default=None, help="Override max agent steps")
     parser.add_argument(
-        "--model", type=str, default="anthropic/claude-sonnet-4-20250514",
+        "--model",
+        type=str,
+        default="anthropic/claude-sonnet-4-20250514",
         help="LLM model ID (default: claude-sonnet-4)",
     )
     parser.add_argument(
-        "--approval", type=str, default=None,
+        "--approval",
+        type=str,
+        default=None,
         choices=["terminal", "auto", None],
         help="Human-in-the-loop approval mode",
     )
 
     # Output
     parser.add_argument(
-        "--dashboard-dir", type=str, default=None,
+        "--dashboard-dir",
+        type=str,
+        default=None,
         help="Dashboard output directory (default: auto from campaign ref)",
     )
     parser.add_argument(
-        "--no-dashboard", action="store_true",
+        "--no-dashboard",
+        action="store_true",
         help="Skip dashboard generation",
     )
 
@@ -194,7 +206,7 @@ examples:
 
     run_kwargs = campaign_goal.to_run_kwargs()
 
-    result = run_experiment_loop(
+    run_experiment_loop(
         **run_kwargs,
         model_id=args.model,
         approval=args.approval,
@@ -207,7 +219,9 @@ examples:
     print("=" * 60)
     print(f"  Ref: {campaign_goal.ref}")
     if campaign_goal.target_value is not None:
-        print(f"  Target: {campaign_goal.target_metric} {campaign_goal.target_direction} {campaign_goal.target_value}")
+        print(
+            f"  Target: {campaign_goal.target_metric} {campaign_goal.target_direction} {campaign_goal.target_value}"
+        )
     if dashboard_dir:
         print(f"  Dashboard: {dashboard_dir}/campaign_dashboard.html")
     print("=" * 60)

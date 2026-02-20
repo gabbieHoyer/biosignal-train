@@ -152,16 +152,15 @@ def _sanity_checks(cfg: DictConfig, *, strict: bool) -> None:
 
     # init validation: if init block exists, ckpt_path must be set
     init_cfg = cfg.get("init")
-    if init_cfg is not None:
-        if (
-            OmegaConf.is_missing(init_cfg, "ckpt_path")
-            or not str(init_cfg.get("ckpt_path", "")).strip()
-        ):
-            _warn_or_raise(
-                "Config has an init block but init.ckpt_path is missing/empty. "
-                "Either remove init: entirely, or set init.ckpt_path.",
-                strict=strict,
-            )
+    if init_cfg is not None and (
+        OmegaConf.is_missing(init_cfg, "ckpt_path")
+        or not str(init_cfg.get("ckpt_path", "")).strip()
+    ):
+        _warn_or_raise(
+            "Config has an init block but init.ckpt_path is missing/empty. "
+            "Either remove init: entirely, or set init.ckpt_path.",
+            strict=strict,
+        )
 
 
 def validate_cfg(

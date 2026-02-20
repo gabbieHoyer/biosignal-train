@@ -65,10 +65,9 @@ def match_events_with_tolerance(
             overlap = not (pe <= ts or te <= ps)
             dist = abs(ps - ts)
 
-            if overlap or dist <= tol:
-                if dist < best_dist:
-                    best_dist = dist
-                    best_j = j
+            if (overlap or dist <= tol) and dist < best_dist:
+                best_dist = dist
+                best_j = j
 
         if best_j >= 0:
             used[best_j] = True

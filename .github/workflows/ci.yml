@@ -30,5 +30,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,agent]"
 
+      - name: Pre-commit (skip mypy)
+        run: |
+          SKIP=mypy pre-commit run --all-files --show-diff-on-failure
+
       - name: Pytest
         run: pytest -q

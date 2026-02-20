@@ -16,10 +16,7 @@ def to_tensor(
     device: Optional[torch.device] = None,
     dtype: Optional[torch.dtype] = None,
 ) -> torch.Tensor:
-    if isinstance(x, torch.Tensor):
-        t = x
-    else:
-        t = torch.as_tensor(x)
+    t = x if isinstance(x, torch.Tensor) else torch.as_tensor(x)
     if dtype is not None:
         t = t.to(dtype=dtype)
     if device is not None:

@@ -59,7 +59,7 @@ def export_campaign_data(
     This is the bridge between the Python agent system and
     the HTML dashboard.
     """
-    store_data = feedback_store.to_dict()
+    feedback_store.to_dict()
     drift = feedback_store.detect_drift()
 
     # Build per-run detail with training curves

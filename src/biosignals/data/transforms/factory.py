@@ -31,7 +31,7 @@ def build_transform(spec: Any) -> Transform:
         return Identity()
 
     if callable(spec):
-        return spec  # type: ignore[return-value]
+        return spec
 
     # Plain python containers
     if isinstance(spec, (list, tuple)):
@@ -106,7 +106,7 @@ def build_transform(spec: Any) -> Transform:
 def _coerce_item(x: Any, *, context: str) -> Transform:
     # Already callable
     if callable(x):
-        return x  # type: ignore[return-value]
+        return x
 
     # OmegaConf node -> instantiate single item
     if OmegaConf.is_config(x):
@@ -124,7 +124,7 @@ def _coerce_item(x: Any, *, context: str) -> Transform:
             raise TypeError(
                 f"{context}: instantiated item is not callable. type={type(inst)} value={inst}"
             )
-        return inst  # type: ignore[return-value]
+        return inst
 
     # Anything else is invalid
     raise TypeError(
@@ -136,11 +136,11 @@ def _ensure_transform_callable(inst: Any, *, context: str) -> Transform:
     if inst is None:
         return Identity()
     if callable(inst):
-        return inst  # type: ignore[return-value]
+        return inst
     if isinstance(inst, (list, tuple, ListConfig)):
         items = list(inst)
         _assert_all_callable(items, context=f"{context} (list returned)")
-        return Compose(items)  # type: ignore[arg-type]
+        return Compose(items)
     raise TypeError(
         f"{context}: instantiated object is not callable. type={type(inst)} value={inst}"
     )
