@@ -29,7 +29,11 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["E501"]  # let formatter handle line length
+ignore = [
+  "E501",  # let formatter handle line length
+  "UP006", # allow typing.List/Dict/etc instead of built-in generics
+  "UP007", # allow Optional[T] instead of T | None
+]
 
 [tool.ruff.format]
 quote-style = "double"
