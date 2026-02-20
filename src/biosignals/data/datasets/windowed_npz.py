@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -48,7 +49,7 @@ class _LRUSubjectCache:
     max_items: int = 8
 
     def __post_init__(self) -> None:
-        self._cache: "OrderedDict[str, Dict[str, np.ndarray]]" = OrderedDict()
+        self._cache: OrderedDict[str, Dict[str, np.ndarray]] = OrderedDict()
 
     def get(self, key: str) -> Optional[Dict[str, np.ndarray]]:
         if key in self._cache:
@@ -144,7 +145,9 @@ class WindowedNpzDataset(BiosignalDataset):
         # Required columns
         for c in [self.subject_col, self.npz_col, self.start_col, self.end_col]:
             if c not in df.columns:
-                raise KeyError(f"View is missing required column '{c}'. Found: {df.columns.tolist()}")
+                raise KeyError(
+                    f"View is missing required column '{c}'. Found: {df.columns.tolist()}"
+                )
 
         if self.split_col in df.columns:
             df = df[df[self.split_col].astype(str) == str(split)].reset_index(drop=True)
@@ -167,7 +170,9 @@ class WindowedNpzDataset(BiosignalDataset):
                 df = df[mask].reset_index(drop=True)
 
         if len(df) == 0:
-            raise RuntimeError(f"No rows left after filtering view={self.view_path} for split='{split}'")
+            raise RuntimeError(
+                f"No rows left after filtering view={self.view_path} for split='{split}'"
+            )
 
         self.rows: List[Dict[str, Any]] = df.to_dict(orient="records")
         self._subj_cache = _LRUSubjectCache(max_items=int(subject_cache_size))
@@ -194,7 +199,7 @@ class WindowedNpzDataset(BiosignalDataset):
         r = self.rows[idx]
 
         subject_id = str(r[self.subject_col])  # grouping id
-        npz_id = str(r[self.npz_col])          # file id
+        npz_id = str(r[self.npz_col])  # file id
 
         i0 = int(r[self.start_col])
         i1 = int(r[self.end_col])
@@ -241,7 +246,15 @@ class WindowedNpzDataset(BiosignalDataset):
             meta["npz_id"] = npz_id
 
         # Common optional columns (kept from your original)
-        for opt in ["session_id", "session", "tsst", "ssst", "t_start_ms", "t_end_ms", "t_center_ms"]:
+        for opt in [
+            "session_id",
+            "session",
+            "tsst",
+            "ssst",
+            "t_start_ms",
+            "t_end_ms",
+            "t_center_ms",
+        ]:
             if opt in r:
                 meta[opt] = r[opt]
 

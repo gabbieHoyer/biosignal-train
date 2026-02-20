@@ -2,18 +2,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple, Any
+from typing import Any, Optional, Tuple
 
 from hydra.utils import instantiate
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-from biosignals.utils.distributed import is_distributed, get_rank
-from biosignals.utils.reproducibility import worker_init_fn
-
+from biosignals.data.datasets.wrappers import CacheDataset, TransformDataset
 from biosignals.data.transforms.factory import build_transform
-from biosignals.data.datasets.wrappers import TransformDataset, CacheDataset
+from biosignals.utils.distributed import get_rank, is_distributed
+from biosignals.utils.reproducibility import worker_init_fn
 
 
 @dataclass
@@ -126,7 +125,9 @@ def make_split_loader(
     Build one loader for a given split: train | val | test
     """
     if split not in dataset_cfg or dataset_cfg.get(split) is None:
-        raise KeyError(f"dataset config has no split '{split}'. Available: {list(dataset_cfg.keys())}")
+        raise KeyError(
+            f"dataset config has no split '{split}'. Available: {list(dataset_cfg.keys())}"
+        )
 
     rank = get_rank() if is_distributed() else 0
     cache_dir = _get_cache_dir(dataset_cfg, split)

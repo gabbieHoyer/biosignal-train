@@ -6,5 +6,3 @@ primary_modality: main
 num_classes: 5
 multilabel: true
 threshold: 0.5
-
-

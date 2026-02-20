@@ -1,5 +1,6 @@
 # src/biosignals/models/architectures/transformer1d.py
 from __future__ import annotations
+
 from typing import Dict, Optional
 
 import torch
@@ -13,6 +14,7 @@ class Transformer1DClassifier(nn.Module):
     """
     End-to-end classifier: patchify + Transformer encoder + masked pooling head.
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -39,18 +41,22 @@ class Transformer1DClassifier(nn.Module):
             dropout=float(dropout),
         )
         # Pool over token axis using same head module (treat tokens as "time")
-        self.head = ClassificationHead(in_dim=int(embed_dim), num_classes=int(num_classes), dropout=float(dropout))
+        self.head = ClassificationHead(
+            in_dim=int(embed_dim), num_classes=int(num_classes), dropout=float(dropout)
+        )
 
     def encode(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None) -> torch.Tensor:
         x = signals[self.primary_modality]  # (B,C,T)
         mask_t = meta.get("mask") if meta is not None else None
-        tokens, tok_mask = self.encoder(x, mask_t=mask_t)   # (B,N,D), (B,N)
-        feats = tokens.transpose(1, 2)                      # (B,D,N)
-        return self.head.pool(feats, mask_t=tok_mask)       # (B,D)
+        tokens, tok_mask = self.encoder(x, mask_t=mask_t)  # (B,N,D), (B,N)
+        feats = tokens.transpose(1, 2)  # (B,D,N)
+        return self.head.pool(feats, mask_t=tok_mask)  # (B,D)
 
-    def forward(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None) -> torch.Tensor:
+    def forward(
+        self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None
+    ) -> torch.Tensor:
         x = signals[self.primary_modality]
         mask_t = meta.get("mask") if meta is not None else None
         tokens, tok_mask = self.encoder(x, mask_t=mask_t)
-        feats = tokens.transpose(1, 2)                      # (B,D,N)
-        return self.head(feats, mask_t=tok_mask)            # (B,K)
+        feats = tokens.transpose(1, 2)  # (B,D,N)
+        return self.head(feats, mask_t=tok_mask)  # (B,K)

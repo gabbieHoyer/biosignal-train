@@ -1,7 +1,9 @@
 # src/biosignals/models/backbones/resnet1d.py
 from __future__ import annotations
+
 import torch
 from torch import nn
+
 
 class ConvBlock(nn.Module):
     def __init__(self, cin: int, cout: int, k: int = 7, s: int = 1) -> None:
@@ -22,6 +24,7 @@ class ResNet1DEncoder(nn.Module):
     Encoder only:
       (B,C,T) -> (B,D,T')
     """
+
     def __init__(self, in_channels: int) -> None:
         super().__init__()
         self.stem = ConvBlock(int(in_channels), 64, k=11, s=2)

@@ -6,21 +6,20 @@ No API key needed.
 Run:
     PYTHONPATH=$PWD/src python -m pytest tests/test_hooks.py -v
 """
+
 import json
 
 import pytest
 
+from biosignals.agent.feedback import FeedbackStore
 from biosignals.agent.hooks import (
     ApprovalDecision,
-    ApprovalHook,
     AutoApproveHook,
     CallbackApprovalHook,
-    set_approval_hook,
-    get_approval_hook,
     clear_approval_hook,
+    get_approval_hook,
+    set_approval_hook,
 )
-from biosignals.agent.feedback import FeedbackStore
-
 
 # ─────────────────────────────────────────────────
 # Fixtures
@@ -108,6 +107,7 @@ class TestAutoApproveHook:
 class TestCallbackApprovalHook:
     def test_reject_on_condition(self, store):
         """Reject any run with lr > 0.01."""
+
         def policy(overrides, st, run_num):
             if "lr=0.1" in overrides:
                 return ApprovalDecision(action="reject", reason="lr too high")
@@ -124,6 +124,7 @@ class TestCallbackApprovalHook:
 
     def test_modify_overrides(self, store):
         """Always add epochs=5 to the overrides."""
+
         def policy(overrides, st, run_num):
             return ApprovalDecision(
                 action="modify",
@@ -226,6 +227,7 @@ class TestRunTrainingHookIntegration:
 
         # The training will fail (no real CLI), but the hook should fire first
         from biosignals.agent.tools import run_training
+
         run_training.forward(overrides="trainer.lr=0.1")
 
         assert len(modify_hook.history) == 1

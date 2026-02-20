@@ -1,14 +1,14 @@
 # src/biosignals/metrics/segmentation.py
 from __future__ import annotations
-from typing import Optional
 
 import torch
 
+
 @torch.no_grad()
 def dice_multiclass(
-    logits: torch.Tensor,          # (B, K, T)
-    y: torch.Tensor,               # (B, T) int
-    mask: torch.Tensor,            # (B, T) bool
+    logits: torch.Tensor,  # (B, K, T)
+    y: torch.Tensor,  # (B, T) int
+    mask: torch.Tensor,  # (B, T) bool
     num_classes: int,
     eps: float = 1e-6,
 ) -> torch.Tensor:
@@ -34,9 +34,8 @@ def dice_multiclass(
     return dice_sum / float(valid_classes)
 
 
-
 # requirements:
 
-    # mask must be bool and on same device as logits/y.
+# mask must be bool and on same device as logits/y.
 
-    # With the updated batch_to_device() (recursive meta move), storing mask in batch.meta["mask"] is safe.
+# With the updated batch_to_device() (recursive meta move), storing mask in batch.meta["mask"] is safe.

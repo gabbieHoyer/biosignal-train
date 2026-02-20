@@ -26,9 +26,9 @@ val:
   dropna_labels: true
   subject_cache_size: 2
 
-  subject_col: subject_id   
-  npz_col: record_id       
-  id_col: example_id       
+  subject_col: subject_id
+  npz_col: record_id
+  id_col: example_id
 
 test:
   _target_: biosignals.data.datasets.windowed_npz.WindowedNpzDataset
@@ -41,9 +41,9 @@ test:
   dropna_labels: true
   subject_cache_size: 2
 
-  subject_col: subject_id   
-  npz_col: record_id       
-  id_col: example_id   
+  subject_col: subject_id
+  npz_col: record_id
+  id_col: example_id
 
 
 # Wrapper-only settings live HERE (not inside train/val/test nodes)
@@ -51,4 +51,3 @@ cache:
   train: null
   val: null
   test: null
-

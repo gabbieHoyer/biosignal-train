@@ -1,21 +1,21 @@
 # src/biosignals/engine/trainer.py
 from __future__ import annotations
 
+import logging
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-import math
-import logging
 import torch
 from torch.cuda.amp import GradScaler
 from torch.utils.data import DataLoader
 
-from biosignals.engine.loops import train_one_epoch, evaluate_one_epoch
+from biosignals.engine.loops import evaluate_one_epoch, train_one_epoch
+from biosignals.loggers.base import ExperimentLogger, NoopLogger
+from biosignals.utils.checkpointing import save_checkpoint
 from biosignals.utils.distributed import is_distributed, is_main_process
 from biosignals.utils.io import append_jsonl, write_json
-from biosignals.utils.checkpointing import save_checkpoint
-from biosignals.loggers.base import ExperimentLogger, NoopLogger
 
 log = logging.getLogger("biosignals")
 
@@ -88,7 +88,7 @@ def _find_cache_dataset(ds: Any) -> Any:
         if hasattr(cur, "count_cached") and hasattr(cur, "cache_dir") and hasattr(cur, "prefix"):
             return cur
         if hasattr(cur, "dataset"):
-            cur = getattr(cur, "dataset")
+            cur = cur.dataset
         else:
             break
     return None
@@ -211,7 +211,9 @@ class Trainer:
                 append_jsonl(metrics_path, record)
                 logger.log_metrics(metrics, step=epoch)
 
-            improved = (not math.isnan(float(monitor_value))) and _better(float(monitor_value), self.best_value, mode)
+            improved = (not math.isnan(float(monitor_value))) and _better(
+                float(monitor_value), self.best_value, mode
+            )
 
             if is_main_process():
                 if self.cfg.save_last and ((epoch + 1) % int(self.cfg.save_every) == 0):
@@ -222,7 +224,11 @@ class Trainer:
                         scaler=self.scaler,
                         epoch=epoch,
                         global_step=self.global_step,
-                        extra={"monitor_metric": mm, "monitor_mode": mode, "monitor_value": float(monitor_value)},
+                        extra={
+                            "monitor_metric": mm,
+                            "monitor_mode": mode,
+                            "monitor_value": float(monitor_value),
+                        },
                     )
 
                 if self.cfg.save_best and improved:
@@ -236,15 +242,25 @@ class Trainer:
                         scaler=self.scaler,
                         epoch=epoch,
                         global_step=self.global_step,
-                        extra={"monitor_metric": mm, "monitor_mode": mode, "monitor_value": float(monitor_value)},
+                        extra={
+                            "monitor_metric": mm,
+                            "monitor_mode": mode,
+                            "monitor_value": float(monitor_value),
+                        },
                     )
 
                 summary = {
                     "monitor": {"metric": mm, "mode": mode},
-                    "best": {"epoch": self.best_epoch, "value": self.best_value, "ckpt_path": self.best_ckpt_path},
+                    "best": {
+                        "epoch": self.best_epoch,
+                        "value": self.best_value,
+                        "ckpt_path": self.best_ckpt_path,
+                    },
                     "last": {
                         "epoch": int(epoch),
-                        "ckpt_path": str((ckpt_dir / "last.pt").resolve()) if self.cfg.save_last else None,
+                        "ckpt_path": str((ckpt_dir / "last.pt").resolve())
+                        if self.cfg.save_last
+                        else None,
                     },
                 }
                 write_json(summary_path, summary)
@@ -256,7 +272,6 @@ class Trainer:
             logger.log_artifact(str(metrics_path), name="metrics_jsonl")
             logger.log_artifact(str(summary_path), name="summary_json")
             logger.finish()
-
 
 
 # -------------------------------------------------------------

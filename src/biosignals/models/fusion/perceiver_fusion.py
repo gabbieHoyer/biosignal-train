@@ -1,10 +1,12 @@
 # src/biosignals/models/fusion/perceiver_fusion.py
 from __future__ import annotations
-from typing import Dict, List, Mapping, Optional, Tuple
+
+from collections.abc import Mapping
+from typing import Dict, List, Optional, Tuple
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 def sinusoidal_pos_emb(seq_len: int, dim: int, device: torch.device) -> torch.Tensor:
@@ -13,7 +15,9 @@ def sinusoidal_pos_emb(seq_len: int, dim: int, device: torch.device) -> torch.Te
     half = dim // 2
     pos = torch.arange(seq_len, device=device, dtype=torch.float32)
     inv_freq = torch.exp(
-        -torch.log(torch.tensor(10000.0, device=device)) * torch.arange(half, device=device).float() / max(half, 1)
+        -torch.log(torch.tensor(10000.0, device=device))
+        * torch.arange(half, device=device).float()
+        / max(half, 1)
     )
     angles = pos[:, None] * inv_freq[None, :]
     emb = torch.cat([torch.sin(angles), torch.cos(angles)], dim=-1)
@@ -22,7 +26,9 @@ def sinusoidal_pos_emb(seq_len: int, dim: int, device: torch.device) -> torch.Te
     return emb.unsqueeze(0)
 
 
-def pad_to_multiple_1d(x: torch.Tensor, mask_t: torch.Tensor, multiple: int) -> Tuple[torch.Tensor, torch.Tensor]:
+def pad_to_multiple_1d(
+    x: torch.Tensor, mask_t: torch.Tensor, multiple: int
+) -> Tuple[torch.Tensor, torch.Tensor]:
     if multiple <= 0:
         return x, mask_t
     b, c, t = x.shape
@@ -40,7 +46,9 @@ def downsample_mask_to_tokens(mask_t: torch.Tensor, patch_size: int, n_tokens: i
     need = n_tokens * patch_size
     if t < need:
         pad = need - t
-        mask_t = torch.cat([mask_t, torch.zeros((b, pad), device=mask_t.device, dtype=torch.bool)], dim=1)
+        mask_t = torch.cat(
+            [mask_t, torch.zeros((b, pad), device=mask_t.device, dtype=torch.bool)], dim=1
+        )
     else:
         mask_t = mask_t[:, :need]
     return mask_t.view(b, n_tokens, patch_size).any(dim=-1)
@@ -50,12 +58,14 @@ class PatchEmbed1D(nn.Module):
     def __init__(self, in_channels: int, embed_dim: int, patch_size: int) -> None:
         super().__init__()
         self.patch_size = int(patch_size)
-        self.proj = nn.Conv1d(in_channels, embed_dim, kernel_size=self.patch_size, stride=self.patch_size, bias=False)
+        self.proj = nn.Conv1d(
+            in_channels, embed_dim, kernel_size=self.patch_size, stride=self.patch_size, bias=False
+        )
         self.norm = nn.LayerNorm(embed_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        z = self.proj(x)      # (B, D, N)
-        z = z.transpose(1, 2) # (B, N, D)
+        z = self.proj(x)  # (B, D, N)
+        z = z.transpose(1, 2)  # (B, N, D)
         return self.norm(z)
 
 
@@ -79,11 +89,15 @@ class PerceiverBlock(nn.Module):
         super().__init__()
         self.cross_q = nn.LayerNorm(dim)
         self.cross_kv = nn.LayerNorm(dim)
-        self.cross_attn = nn.MultiheadAttention(embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True)
+        self.cross_attn = nn.MultiheadAttention(
+            embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True
+        )
 
         self.lat_ln1 = nn.LayerNorm(dim)
         self.lat_ln2 = nn.LayerNorm(dim)
-        self.self_attn = nn.MultiheadAttention(embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True)
+        self.self_attn = nn.MultiheadAttention(
+            embed_dim=dim, num_heads=num_heads, dropout=dropout, batch_first=True
+        )
 
         hidden = int(dim * mlp_ratio)
         self.mlp1 = MLP(dim, hidden, dropout)
@@ -116,6 +130,7 @@ class PerceiverFusionEncoder(nn.Module):
     Returns:
       pooled embedding (B, D)
     """
+
     def __init__(
         self,
         modalities: List[str],
@@ -141,17 +156,26 @@ class PerceiverFusionEncoder(nn.Module):
         for m in self.modalities:
             self.in_channels[m] = int(in_channels[m])
             self.patch_size[m] = int(patch_size[m])
-            self.patch_embeds[m] = PatchEmbed1D(self.in_channels[m], self.embed_dim, self.patch_size[m])
+            self.patch_embeds[m] = PatchEmbed1D(
+                self.in_channels[m], self.embed_dim, self.patch_size[m]
+            )
 
         self.mod_emb = nn.Embedding(len(self.modalities), self.embed_dim)
 
         self.latents = nn.Parameter(torch.randn(int(num_latents), self.embed_dim) * 0.02)
         self.null_token = nn.Parameter(torch.zeros(1, 1, self.embed_dim))
 
-        self.blocks = nn.ModuleList([PerceiverBlock(self.embed_dim, int(num_heads), float(mlp_ratio), float(dropout)) for _ in range(int(depth))])
+        self.blocks = nn.ModuleList(
+            [
+                PerceiverBlock(self.embed_dim, int(num_heads), float(mlp_ratio), float(dropout))
+                for _ in range(int(depth))
+            ]
+        )
         self.out_norm = nn.LayerNorm(self.embed_dim)
 
-    def forward(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None) -> torch.Tensor:
+    def forward(
+        self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None
+    ) -> torch.Tensor:
         any_tensor = next(iter(signals.values()))
         b = int(any_tensor.shape[0])
         device = any_tensor.device
@@ -169,7 +193,7 @@ class PerceiverFusionEncoder(nn.Module):
         tokenmask_all: List[torch.Tensor] = []
 
         for mi, m in enumerate(self.modalities):
-            present = (m in signals)
+            present = m in signals
             if present:
                 x = signals[m]
             else:
@@ -197,13 +221,15 @@ class PerceiverFusionEncoder(nn.Module):
             tok = tok + sinusoidal_pos_emb(n, self.embed_dim, device=device)
             tok = tok + self.mod_emb.weight[mi].view(1, 1, -1)
 
-            tok_mask = downsample_mask_to_tokens(mask_t, patch_size=self.patch_size[m], n_tokens=n)  # (B,N)
+            tok_mask = downsample_mask_to_tokens(
+                mask_t, patch_size=self.patch_size[m], n_tokens=n
+            )  # (B,N)
 
             tokens_all.append(tok)
             tokenmask_all.append(tok_mask)
 
-        inputs = torch.cat(tokens_all, dim=1)      # (B,S,D)
-        tok_mask = torch.cat(tokenmask_all, dim=1) # (B,S)
+        inputs = torch.cat(tokens_all, dim=1)  # (B,S,D)
+        tok_mask = torch.cat(tokenmask_all, dim=1)  # (B,S)
 
         null_tok = self.null_token.expand(b, 1, -1).to(device=device, dtype=dtype)
         inputs = torch.cat([null_tok, inputs], dim=1)

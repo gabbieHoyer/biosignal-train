@@ -16,13 +16,12 @@ Usage (from project root):
     # Don't auto-open browser:
     PYTHONPATH=$PWD/src python scripts/demo_dashboard.py --no-open
 """
+
 from __future__ import annotations
 
 import argparse
 import math
 import random
-import sys
-from pathlib import Path
 
 # ─────────────────────────────────────────────────
 # Ensure reproducible demo data
@@ -49,15 +48,21 @@ def make_epoch_records(
         val = max(0.01, base + random.uniform(-noise * base, noise * base))
         train_val = val * random.uniform(0.80, 0.95)  # train is better than val
 
-        records.append(EpochRecord(
-            epoch=e,
-            global_step=e * 100,
-            train={"loss": train_val * 0.5, "mae": train_val, "r2": max(0, 1 - train_val / 100)},
-            val={"loss": val * 0.5, "mae": val, "r2": max(0, 1 - val / 100)},
-            monitor_metric=monitor_metric,
-            monitor_mode=monitor_mode,
-            monitor_value=val,
-        ))
+        records.append(
+            EpochRecord(
+                epoch=e,
+                global_step=e * 100,
+                train={
+                    "loss": train_val * 0.5,
+                    "mae": train_val,
+                    "r2": max(0, 1 - train_val / 100),
+                },
+                val={"loss": val * 0.5, "mae": val, "r2": max(0, 1 - val / 100)},
+                monitor_metric=monitor_metric,
+                monitor_mode=monitor_mode,
+                monitor_value=val,
+            )
+        )
     return records
 
 
@@ -75,7 +80,6 @@ def build_demo_campaign():
     """
     from biosignals.agent.feedback import FeedbackStore, RunRecord
     from biosignals.agent.hooks import (
-        AutoApproveHook,
         ApprovalDecision,
         CallbackApprovalHook,
     )
@@ -84,83 +88,123 @@ def build_demo_campaign():
 
     # ── Run 1: Baseline ──
     epochs_1 = make_epoch_records(5, start_val=55.0, end_val=48.0)
-    store.add_run(RunRecord(
-        run_dir="/tmp/demo/run_2025-02-17_001",
-        timestamp="2025-02-17T10:00:00",
-        monitor_metric="val/mae", monitor_mode="min",
-        best_epoch=4, best_value=48.23,
-        best_ckpt_path="/tmp/demo/run_001/checkpoints/best.pt",
-        last_epoch=4, last_ckpt_path="/tmp/demo/run_001/checkpoints/last.pt",
-        epoch_history=epochs_1,
-        task_name="RegressionTask", model_name="EncoderClassifier",
-        dataset_name="GalaxyPPGDataset", lr=0.0003, epochs_configured=5,
-        overrides=["experiment=galaxyppg_hr_ppg", "trainer=fast_dev"],
-        config={},
-    ))
+    store.add_run(
+        RunRecord(
+            run_dir="/tmp/demo/run_2025-02-17_001",
+            timestamp="2025-02-17T10:00:00",
+            monitor_metric="val/mae",
+            monitor_mode="min",
+            best_epoch=4,
+            best_value=48.23,
+            best_ckpt_path="/tmp/demo/run_001/checkpoints/best.pt",
+            last_epoch=4,
+            last_ckpt_path="/tmp/demo/run_001/checkpoints/last.pt",
+            epoch_history=epochs_1,
+            task_name="RegressionTask",
+            model_name="EncoderClassifier",
+            dataset_name="GalaxyPPGDataset",
+            lr=0.0003,
+            epochs_configured=5,
+            overrides=["experiment=galaxyppg_hr_ppg", "trainer=fast_dev"],
+            config={},
+        )
+    )
 
     # ── Run 2: More epochs + higher lr → big improvement ──
     epochs_2 = make_epoch_records(10, start_val=42.0, end_val=10.5)
-    store.add_run(RunRecord(
-        run_dir="/tmp/demo/run_2025-02-17_002",
-        timestamp="2025-02-17T10:15:00",
-        monitor_metric="val/mae", monitor_mode="min",
-        best_epoch=9, best_value=10.94,
-        best_ckpt_path="/tmp/demo/run_002/checkpoints/best.pt",
-        last_epoch=9, last_ckpt_path="/tmp/demo/run_002/checkpoints/last.pt",
-        epoch_history=epochs_2,
-        task_name="RegressionTask", model_name="EncoderClassifier",
-        dataset_name="GalaxyPPGDataset", lr=0.001, epochs_configured=10,
-        overrides=["experiment=galaxyppg_hr_ppg", "trainer.lr=0.001", "trainer.epochs=10"],
-        config={},
-    ))
+    store.add_run(
+        RunRecord(
+            run_dir="/tmp/demo/run_2025-02-17_002",
+            timestamp="2025-02-17T10:15:00",
+            monitor_metric="val/mae",
+            monitor_mode="min",
+            best_epoch=9,
+            best_value=10.94,
+            best_ckpt_path="/tmp/demo/run_002/checkpoints/best.pt",
+            last_epoch=9,
+            last_ckpt_path="/tmp/demo/run_002/checkpoints/last.pt",
+            epoch_history=epochs_2,
+            task_name="RegressionTask",
+            model_name="EncoderClassifier",
+            dataset_name="GalaxyPPGDataset",
+            lr=0.001,
+            epochs_configured=10,
+            overrides=["experiment=galaxyppg_hr_ppg", "trainer.lr=0.001", "trainer.epochs=10"],
+            config={},
+        )
+    )
 
     # ── Run 3: Try Transformer1D → worse (agent learns) ──
     epochs_3 = make_epoch_records(10, start_val=38.0, end_val=15.0)
-    store.add_run(RunRecord(
-        run_dir="/tmp/demo/run_2025-02-17_003",
-        timestamp="2025-02-17T10:35:00",
-        monitor_metric="val/mae", monitor_mode="min",
-        best_epoch=8, best_value=15.22,
-        best_ckpt_path="/tmp/demo/run_003/checkpoints/best.pt",
-        last_epoch=9, last_ckpt_path="/tmp/demo/run_003/checkpoints/last.pt",
-        epoch_history=epochs_3,
-        task_name="RegressionTask", model_name="Transformer1D",
-        dataset_name="GalaxyPPGDataset", lr=0.001, epochs_configured=10,
-        overrides=["model=transformer1d", "trainer.lr=0.001", "trainer.epochs=10"],
-        config={},
-    ))
+    store.add_run(
+        RunRecord(
+            run_dir="/tmp/demo/run_2025-02-17_003",
+            timestamp="2025-02-17T10:35:00",
+            monitor_metric="val/mae",
+            monitor_mode="min",
+            best_epoch=8,
+            best_value=15.22,
+            best_ckpt_path="/tmp/demo/run_003/checkpoints/best.pt",
+            last_epoch=9,
+            last_ckpt_path="/tmp/demo/run_003/checkpoints/last.pt",
+            epoch_history=epochs_3,
+            task_name="RegressionTask",
+            model_name="Transformer1D",
+            dataset_name="GalaxyPPGDataset",
+            lr=0.001,
+            epochs_configured=10,
+            overrides=["model=transformer1d", "trainer.lr=0.001", "trainer.epochs=10"],
+            config={},
+        )
+    )
 
     # ── Run 4: Refined lr on best model → improvement ──
     epochs_4 = make_epoch_records(20, start_val=35.0, end_val=7.8)
-    store.add_run(RunRecord(
-        run_dir="/tmp/demo/run_2025-02-17_004",
-        timestamp="2025-02-17T10:55:00",
-        monitor_metric="val/mae", monitor_mode="min",
-        best_epoch=17, best_value=8.31,
-        best_ckpt_path="/tmp/demo/run_004/checkpoints/best.pt",
-        last_epoch=19, last_ckpt_path="/tmp/demo/run_004/checkpoints/last.pt",
-        epoch_history=epochs_4,
-        task_name="RegressionTask", model_name="EncoderClassifier",
-        dataset_name="GalaxyPPGDataset", lr=0.0005, epochs_configured=20,
-        overrides=["experiment=galaxyppg_hr_ppg", "trainer.lr=0.0005", "trainer.epochs=20"],
-        config={},
-    ))
+    store.add_run(
+        RunRecord(
+            run_dir="/tmp/demo/run_2025-02-17_004",
+            timestamp="2025-02-17T10:55:00",
+            monitor_metric="val/mae",
+            monitor_mode="min",
+            best_epoch=17,
+            best_value=8.31,
+            best_ckpt_path="/tmp/demo/run_004/checkpoints/best.pt",
+            last_epoch=19,
+            last_ckpt_path="/tmp/demo/run_004/checkpoints/last.pt",
+            epoch_history=epochs_4,
+            task_name="RegressionTask",
+            model_name="EncoderClassifier",
+            dataset_name="GalaxyPPGDataset",
+            lr=0.0005,
+            epochs_configured=20,
+            overrides=["experiment=galaxyppg_hr_ppg", "trainer.lr=0.0005", "trainer.epochs=20"],
+            config={},
+        )
+    )
 
     # ── Run 5: Agent-generated deeper model → best ──
     epochs_5 = make_epoch_records(20, start_val=30.0, end_val=6.5)
-    store.add_run(RunRecord(
-        run_dir="/tmp/demo/run_2025-02-17_005",
-        timestamp="2025-02-17T11:20:00",
-        monitor_metric="val/mae", monitor_mode="min",
-        best_epoch=18, best_value=7.12,
-        best_ckpt_path="/tmp/demo/run_005/checkpoints/best.pt",
-        last_epoch=19, last_ckpt_path="/tmp/demo/run_005/checkpoints/last.pt",
-        epoch_history=epochs_5,
-        task_name="RegressionTask", model_name="ResNet1DDeep",
-        dataset_name="GalaxyPPGDataset", lr=0.0005, epochs_configured=20,
-        overrides=["model=resnet1d_deep", "trainer.lr=0.0005", "trainer.epochs=20"],
-        config={},
-    ))
+    store.add_run(
+        RunRecord(
+            run_dir="/tmp/demo/run_2025-02-17_005",
+            timestamp="2025-02-17T11:20:00",
+            monitor_metric="val/mae",
+            monitor_mode="min",
+            best_epoch=18,
+            best_value=7.12,
+            best_ckpt_path="/tmp/demo/run_005/checkpoints/best.pt",
+            last_epoch=19,
+            last_ckpt_path="/tmp/demo/run_005/checkpoints/last.pt",
+            epoch_history=epochs_5,
+            task_name="RegressionTask",
+            model_name="ResNet1DDeep",
+            dataset_name="GalaxyPPGDataset",
+            lr=0.0005,
+            epochs_configured=20,
+            overrides=["model=resnet1d_deep", "trainer.lr=0.0005", "trainer.epochs=20"],
+            config={},
+        )
+    )
 
     # ── Approval hook history (simulate human-in-the-loop) ──
     hook = CallbackApprovalHook(
@@ -172,40 +216,57 @@ def build_demo_campaign():
     hook.history = []
     from biosignals.agent.hooks import ApprovalRecord
 
-    hook.history.append(ApprovalRecord(
-        run_number=1, timestamp="2025-02-17T09:59:00",
-        proposed_overrides="experiment=galaxyppg_hr_ppg trainer=fast_dev",
-        decision=ApprovalDecision(action="approve", reason="baseline — let's see"),
-        final_overrides="experiment=galaxyppg_hr_ppg trainer=fast_dev",
-    ))
-    hook.history.append(ApprovalRecord(
-        run_number=2, timestamp="2025-02-17T10:14:00",
-        proposed_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.001 trainer.epochs=10",
-        decision=ApprovalDecision(action="approve", reason="good suggestion from agent"),
-        final_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.001 trainer.epochs=10",
-    ))
-    hook.history.append(ApprovalRecord(
-        run_number=3, timestamp="2025-02-17T10:34:00",
-        proposed_overrides="model=transformer1d trainer.lr=0.001 trainer.epochs=10",
-        decision=ApprovalDecision(action="approve", reason="worth trying different arch"),
-        final_overrides="model=transformer1d trainer.lr=0.001 trainer.epochs=10",
-    ))
-    hook.history.append(ApprovalRecord(
-        run_number=4, timestamp="2025-02-17T10:54:00",
-        proposed_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.001 trainer.epochs=30",
-        decision=ApprovalDecision(
-            action="modify",
-            modified_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.0005 trainer.epochs=20",
-            reason="too many epochs, lower lr instead",
-        ),
-        final_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.0005 trainer.epochs=20",
-    ))
-    hook.history.append(ApprovalRecord(
-        run_number=5, timestamp="2025-02-17T11:19:00",
-        proposed_overrides="model=resnet1d_deep trainer.lr=0.0005 trainer.epochs=20",
-        decision=ApprovalDecision(action="approve", reason="agent-generated arch, let's test it"),
-        final_overrides="model=resnet1d_deep trainer.lr=0.0005 trainer.epochs=20",
-    ))
+    hook.history.append(
+        ApprovalRecord(
+            run_number=1,
+            timestamp="2025-02-17T09:59:00",
+            proposed_overrides="experiment=galaxyppg_hr_ppg trainer=fast_dev",
+            decision=ApprovalDecision(action="approve", reason="baseline — let's see"),
+            final_overrides="experiment=galaxyppg_hr_ppg trainer=fast_dev",
+        )
+    )
+    hook.history.append(
+        ApprovalRecord(
+            run_number=2,
+            timestamp="2025-02-17T10:14:00",
+            proposed_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.001 trainer.epochs=10",
+            decision=ApprovalDecision(action="approve", reason="good suggestion from agent"),
+            final_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.001 trainer.epochs=10",
+        )
+    )
+    hook.history.append(
+        ApprovalRecord(
+            run_number=3,
+            timestamp="2025-02-17T10:34:00",
+            proposed_overrides="model=transformer1d trainer.lr=0.001 trainer.epochs=10",
+            decision=ApprovalDecision(action="approve", reason="worth trying different arch"),
+            final_overrides="model=transformer1d trainer.lr=0.001 trainer.epochs=10",
+        )
+    )
+    hook.history.append(
+        ApprovalRecord(
+            run_number=4,
+            timestamp="2025-02-17T10:54:00",
+            proposed_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.001 trainer.epochs=30",
+            decision=ApprovalDecision(
+                action="modify",
+                modified_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.0005 trainer.epochs=20",
+                reason="too many epochs, lower lr instead",
+            ),
+            final_overrides="experiment=galaxyppg_hr_ppg trainer.lr=0.0005 trainer.epochs=20",
+        )
+    )
+    hook.history.append(
+        ApprovalRecord(
+            run_number=5,
+            timestamp="2025-02-17T11:19:00",
+            proposed_overrides="model=resnet1d_deep trainer.lr=0.0005 trainer.epochs=20",
+            decision=ApprovalDecision(
+                action="approve", reason="agent-generated arch, let's test it"
+            ),
+            final_overrides="model=resnet1d_deep trainer.lr=0.0005 trainer.epochs=20",
+        )
+    )
 
     # ── Agent summary ──
     agent_summary = """Campaign Summary (5 runs):
@@ -246,8 +307,7 @@ def main():
 
     print(f"  {store.n_runs} runs generated")
     print(f"  {len(hook.history)} approval records")
-    print(f"  Best: {store.best_run().best_monitor_value:.2f} "
-          f"({store.best_run().model_name})")
+    print(f"  Best: {store.best_run().best_monitor_value:.2f} " f"({store.best_run().model_name})")
 
     print("\nGenerating dashboard...")
     from biosignals.agent.dashboard import generate_dashboard

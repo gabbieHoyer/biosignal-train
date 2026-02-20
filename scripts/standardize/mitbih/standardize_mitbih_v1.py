@@ -11,15 +11,14 @@ import numpy as np
 import pandas as pd
 import wfdb
 
-
 # -----------------------------
 # AAMI label mapping (MIT-BIH beat symbols -> coarse classes)
 # -----------------------------
-_AAMI_N = {"N", "L", "R", "e", "j"}   # normal, BBB, escape beats
-_AAMI_S = {"A", "a", "J", "S"}        # supraventricular ectopic
-_AAMI_V = {"V", "E"}                  # ventricular ectopic
-_AAMI_F = {"F"}                       # fusion
-_AAMI_Q = {"/", "f", "Q"}             # paced / fusion paced / unclassifiable
+_AAMI_N = {"N", "L", "R", "e", "j"}  # normal, BBB, escape beats
+_AAMI_S = {"A", "a", "J", "S"}  # supraventricular ectopic
+_AAMI_V = {"V", "E"}  # ventricular ectopic
+_AAMI_F = {"F"}  # fusion
+_AAMI_Q = {"/", "f", "Q"}  # paced / fusion paced / unclassifiable
 
 
 def map_symbol(symbol: str, scheme: str) -> Optional[str]:
@@ -176,7 +175,9 @@ def _load_mitdbdir_records_text(raw_root: Path) -> Optional[str]:
     return None
 
 
-def _parse_directory_record_meta(text: str, *, max_notes_chars: int = 2000) -> Dict[str, Dict[str, Any]]:
+def _parse_directory_record_meta(
+    text: str, *, max_notes_chars: int = 2000
+) -> Dict[str, Dict[str, Any]]:
     """
     Parse a mitdbdir 'records' text into per-record metadata:
       - sex, age, medications, lead_config, record_notes
@@ -245,24 +246,55 @@ def _parse_directory_record_meta(text: str, *, max_notes_chars: int = 2000) -> D
 
 def main() -> None:
     ap = argparse.ArgumentParser("Standardize MIT-BIH -> subjects NPZ + views/windows.parquet (v1)")
-    ap.add_argument("--raw_root", type=str, required=True, help="Path to mit-bih-arrhythmia-database-1.0.0")
+    ap.add_argument(
+        "--raw_root", type=str, required=True, help="Path to mit-bih-arrhythmia-database-1.0.0"
+    )
     ap.add_argument("--out_root", type=str, default="data/standardized/mitbih/v1")
 
-    ap.add_argument("--ann_extension", type=str, default="atr", help="Annotation extension (e.g., atr)")
+    ap.add_argument(
+        "--ann_extension", type=str, default="atr", help="Annotation extension (e.g., atr)"
+    )
     ap.add_argument("--label_scheme", type=str, default="aami3", choices=["aami3", "aami5"])
 
     ap.add_argument("--window_left_s", type=float, default=0.30, help="Seconds left of beat sample")
-    ap.add_argument("--window_right_s", type=float, default=0.50, help="Seconds right of beat sample")
+    ap.add_argument(
+        "--window_right_s", type=float, default=0.50, help="Seconds right of beat sample"
+    )
 
-    ap.add_argument("--fs_expected", type=float, default=360.0, help="Warn/skip if record fs differs (<=0 disables)")
-    ap.add_argument("--lead_indices", type=str, default="0,1", help="Comma list of leads to store (default: both leads)")
+    ap.add_argument(
+        "--fs_expected",
+        type=float,
+        default=360.0,
+        help="Warn/skip if record fs differs (<=0 disables)",
+    )
+    ap.add_argument(
+        "--lead_indices",
+        type=str,
+        default="0,1",
+        help="Comma list of leads to store (default: both leads)",
+    )
 
     # "test period" in MIT-BIH directory tables typically excludes first 5 minutes
-    ap.add_argument("--test_period_start_s", type=float, default=300.0, help="Mark beats after this time as in_test_period")
+    ap.add_argument(
+        "--test_period_start_s",
+        type=float,
+        default=300.0,
+        help="Mark beats after this time as in_test_period",
+    )
 
     # Compression flag pair (standard argparse pattern)
-    ap.add_argument("--compress", dest="compress", action="store_true", help="Write subjects as np.savez_compressed")
-    ap.add_argument("--no_compress", dest="compress", action="store_false", help="Write subjects as np.savez (uncompressed)")
+    ap.add_argument(
+        "--compress",
+        dest="compress",
+        action="store_true",
+        help="Write subjects as np.savez_compressed",
+    )
+    ap.add_argument(
+        "--no_compress",
+        dest="compress",
+        action="store_false",
+        help="Write subjects as np.savez (uncompressed)",
+    )
     ap.set_defaults(compress=True)
 
     ap.add_argument("--seed", type=int, default=1337)
@@ -281,7 +313,9 @@ def main() -> None:
 
     records = list_mitbih_records(raw_root)
     if len(records) == 0:
-        raise RuntimeError(f"No records found under {raw_root}. Expected RECORDS file or *.hea headers at root.")
+        raise RuntimeError(
+            f"No records found under {raw_root}. Expected RECORDS file or *.hea headers at root."
+        )
 
     lead_indices = [int(x.strip()) for x in str(args.lead_indices).split(",") if x.strip() != ""]
     if len(lead_indices) == 0:
@@ -372,7 +406,7 @@ def main() -> None:
             raise ValueError("Bad window spec; left/right must be positive.")
 
         kept = 0
-        for w_idx, (samp, sym) in enumerate(zip(ann.sample, ann.symbol)):
+        for w_idx, (samp, sym) in enumerate(zip(ann.sample, ann.symbol, strict=False)):
             lbl = map_symbol(str(sym), str(args.label_scheme))
             if lbl is None:
                 continue
@@ -392,9 +426,9 @@ def main() -> None:
                     "dataset": "mitbih",
                     "version": "v1",
                     "example_id": example_id,
-                    "subject_id": rec,      # NPZ key (record-level)
+                    "subject_id": rec,  # NPZ key (record-level)
                     "record_id": rec,
-                    "group_id": group_id,   # leakage-safe split group
+                    "group_id": group_id,  # leakage-safe split group
                     "window_idx": int(w_idx),
                     "beat_sample": int(samp),
                     "start_idx": int(start),
@@ -424,7 +458,9 @@ def main() -> None:
                 "lead_config": (str(lead_config) if lead_config is not None else ""),
                 "medications": (str(medications) if medications is not None else ""),
                 "record_notes": (str(record_notes) if record_notes else ""),
-                "comments": " | ".join([str(c).strip() for c in comments if str(c).strip()]) if comments else "",
+                "comments": " | ".join([str(c).strip() for c in comments if str(c).strip()])
+                if comments
+                else "",
                 "sig_names_json": json.dumps(list(sig_names)) if sig_names is not None else "",
                 "units_json": json.dumps(list(units)) if units is not None else "",
                 "n_windows": int(kept),
@@ -434,7 +470,9 @@ def main() -> None:
         print(f"[ok] record {rec}: T={T} C={x_ct.shape[0]} windows={kept}")
 
     if len(win_rows) == 0:
-        raise RuntimeError("No windows produced. Check label_scheme, ann_extension, and window spec.")
+        raise RuntimeError(
+            "No windows produced. Check label_scheme, ann_extension, and window spec."
+        )
 
     windows = pd.DataFrame(win_rows)
 
@@ -532,5 +570,3 @@ if __name__ == "__main__":
 #   --window_left_s 0.30 \
 #   --window_right_s 0.50 \
 #   --lead_indices 0,1
-
-

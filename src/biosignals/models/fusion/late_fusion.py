@@ -1,5 +1,6 @@
 # src/biosignals/models/fusion/late_fusion.py
 from __future__ import annotations
+
 import torch
 from torch import nn
 
@@ -12,7 +13,10 @@ class ConcatMLPFusion(nn.Module):
     Input:  z_cat (B, M*D)
     Output: z_fused (B, D_out)
     """
-    def __init__(self, in_dim: int, out_dim: int = 256, hidden_dim: int = 512, dropout: float = 0.1) -> None:
+
+    def __init__(
+        self, in_dim: int, out_dim: int = 256, hidden_dim: int = 512, dropout: float = 0.1
+    ) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(int(in_dim), int(hidden_dim)),

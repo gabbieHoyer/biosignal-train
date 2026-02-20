@@ -1,16 +1,19 @@
 # src/biosignals/tasks/regression.py
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Dict, List
+from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
 
-from biosignals.data.types import Batch, Sample
 from biosignals.data.collate import pad_stack_ct
+from biosignals.data.types import Batch, Sample
+from biosignals.metrics.regression import mae as mae_metric
+from biosignals.metrics.regression import r2 as r2_metric
+from biosignals.metrics.regression import rmse as rmse_metric
 from biosignals.tasks.base import Task
-from biosignals.metrics.regression import mae as mae_metric, rmse as rmse_metric, r2 as r2_metric
-
 
 
 @dataclass
@@ -21,6 +24,7 @@ class RegressionTask(Task):
     Expects dataset emits targets["y"] as float (or shape (1,)).
     Expects model outputs shape (B,) or (B,1).
     """
+
     name: str = "regression"
     primary_modality: str = "main"
 
@@ -48,16 +52,14 @@ class RegressionTask(Task):
                 "sample_meta": [s.meta for s in samples],
                 "subject_ids": [s.meta.get("subject_id") for s in samples],
                 "record_ids": [s.meta.get("record_id") or s.meta.get("npz_id") for s in samples],
-
             }
             return Batch(signals=signals, targets={"y": y}, meta=meta)
 
         return collate
 
-
     def training_step(self, model: torch.nn.Module, batch: Batch) -> Dict[str, torch.Tensor]:
         pred = model(batch.signals, batch.meta)  # (B,) or (B,1)
-        y = batch.targets["y"]                  # (B,)
+        y = batch.targets["y"]  # (B,)
 
         if pred.ndim == 2 and pred.shape[-1] == 1:
             pred = pred.squeeze(-1)
@@ -70,7 +72,6 @@ class RegressionTask(Task):
             "rmse": rmse_metric(pred, y),
             "r2": r2_metric(pred, y),
         }
-
 
     @torch.no_grad()
     def validation_step(self, model: torch.nn.Module, batch: Batch) -> Dict[str, torch.Tensor]:

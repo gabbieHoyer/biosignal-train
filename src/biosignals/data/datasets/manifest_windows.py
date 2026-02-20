@@ -1,9 +1,9 @@
 # src/biosignals/data/datasets/manifest_windows.py
 from __future__ import annotations
+
 import json
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -14,10 +14,11 @@ from biosignals.data.types import Sample
 """
 A manifest-driven dataset skeleton:
 
-This is the “reuse everywhere” dataset: 
+This is the “reuse everywhere” dataset:
     EEG/ECG/PPG/ACC become different manifest builders + readers,
     not different trainers.
 """
+
 
 @dataclass
 class NpySignalReader:
@@ -25,9 +26,10 @@ class NpySignalReader:
     Minimal reader for (C,T) stored as .npy.
     Replace/extend with WFDB/EDF/HDF5 readers as needed.
     """
+
     def read(self, path: str, start: int, length: int) -> np.ndarray:
         x = np.load(path, mmap_mode="r")  # expects (C,T)
-        return np.asarray(x[:, start:start+length], dtype=np.float32)
+        return np.asarray(x[:, start : start + length], dtype=np.float32)
 
 
 class ManifestWindowDataset(BiosignalDataset):

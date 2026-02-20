@@ -1,14 +1,16 @@
 # src/biosignals/models/backbones/transformer1d.py
 from __future__ import annotations
+
 from typing import Optional, Tuple
 
-import math
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
-def sinusoidal_pos_emb(seq_len: int, dim: int, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
+def sinusoidal_pos_emb(
+    seq_len: int, dim: int, device: torch.device, dtype: torch.dtype
+) -> torch.Tensor:
     if seq_len <= 0:
         return torch.zeros((1, 0, dim), device=device, dtype=dtype)
     half = dim // 2
@@ -29,11 +31,13 @@ def padded_len_for_conv1d(t: int, kernel: int, stride: int) -> int:
     T = max(int(t), int(kernel))
     rem = (T - kernel) % stride
     if rem != 0:
-        T += (stride - rem)
+        T += stride - rem
     return T
 
 
-def pad_time(x: torch.Tensor, mask_t: torch.Tensor, T_pad: int) -> Tuple[torch.Tensor, torch.Tensor]:
+def pad_time(
+    x: torch.Tensor, mask_t: torch.Tensor, T_pad: int
+) -> Tuple[torch.Tensor, torch.Tensor]:
     T = int(x.shape[-1])
     if T_pad == T:
         return x, mask_t
@@ -49,25 +53,36 @@ class PatchEmbed1D(nn.Module):
     """
     (B,C,T) -> (B,N,D) via Conv1d(kernel=patch_size, stride=patch_stride)
     """
-    def __init__(self, in_channels: int, embed_dim: int, patch_size: int, patch_stride: Optional[int] = None) -> None:
+
+    def __init__(
+        self, in_channels: int, embed_dim: int, patch_size: int, patch_stride: Optional[int] = None
+    ) -> None:
         super().__init__()
         self.patch_size = int(patch_size)
         self.patch_stride = int(patch_stride) if patch_stride is not None else int(patch_size)
         if self.patch_size <= 0 or self.patch_stride <= 0:
             raise ValueError("patch_size and patch_stride must be > 0")
-        self.proj = nn.Conv1d(int(in_channels), int(embed_dim), kernel_size=self.patch_size, stride=self.patch_stride, bias=False)
+        self.proj = nn.Conv1d(
+            int(in_channels),
+            int(embed_dim),
+            kernel_size=self.patch_size,
+            stride=self.patch_stride,
+            bias=False,
+        )
         self.norm = nn.LayerNorm(int(embed_dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        z = self.proj(x)      # (B,D,N)
-        z = z.transpose(1, 2) # (B,N,D)
+        z = self.proj(x)  # (B,D,N)
+        z = z.transpose(1, 2)  # (B,N,D)
         return self.norm(z)
 
 
-def downsample_mask_to_tokens(mask_t: torch.Tensor, patch_size: int, patch_stride: int) -> torch.Tensor:
+def downsample_mask_to_tokens(
+    mask_t: torch.Tensor, patch_size: int, patch_stride: int
+) -> torch.Tensor:
     m = mask_t.unsqueeze(1).float()  # (B,1,T)
     pooled = F.max_pool1d(m, kernel_size=int(patch_size), stride=int(patch_stride))
-    return pooled.squeeze(1) > 0.0   # (B,N)
+    return pooled.squeeze(1) > 0.0  # (B,N)
 
 
 class Transformer1DEncoder(nn.Module):
@@ -75,6 +90,7 @@ class Transformer1DEncoder(nn.Module):
     Encoder only:
       (B,C,T) + mask_t(B,T) -> tokens(B,N,D) + tok_mask(B,N)
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -91,7 +107,9 @@ class Transformer1DEncoder(nn.Module):
         self.patch_size = int(patch_size)
         self.patch_stride = int(patch_stride) if patch_stride is not None else int(patch_size)
 
-        self.patch_embed = PatchEmbed1D(in_channels, self.embed_dim, self.patch_size, self.patch_stride)
+        self.patch_embed = PatchEmbed1D(
+            in_channels, self.embed_dim, self.patch_size, self.patch_stride
+        )
         self.in_drop = nn.Dropout(float(dropout))
 
         ff = int(self.embed_dim * float(mlp_ratio))

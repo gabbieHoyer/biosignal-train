@@ -25,9 +25,9 @@ Usage (manual):
 # from biosignals.agent.tools import get_feedback_store, reset_feedback_store
 # from biosignals.agent.feedback import FeedbackStore, parse_run_dir, RunRecord, DriftReport
 
+from .feedback import DriftReport, FeedbackStore, RunRecord, parse_run_dir
 from .orchestrator import build_agent, run_experiment_loop
 from .tools import get_feedback_store, reset_feedback_store
-from .feedback import FeedbackStore, parse_run_dir, RunRecord, DriftReport
 
 __all__ = [
     "build_agent",

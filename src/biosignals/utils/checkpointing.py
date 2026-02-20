@@ -1,8 +1,9 @@
 # src/biosignals/utils/checkpointing.py
 # src/biosignals/utils/checkpointing.py
 from __future__ import annotations
-from typing import Any, Dict, Optional
+
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import torch
 
@@ -22,6 +23,7 @@ import torch
 """
 Partial weight loading utility (SSL encoder → finetune encoder)
 """
+
 
 def load_partial_state_dict(
     model: torch.nn.Module,
@@ -47,7 +49,7 @@ def load_partial_state_dict(
     for k, v in state.items():
         if not k.startswith(src_prefix):
             continue
-        new_k = dst_prefix + k[len(src_prefix):]
+        new_k = dst_prefix + k[len(src_prefix) :]
         if new_k not in model_state:
             skipped += 1
             continue

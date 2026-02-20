@@ -25,4 +25,3 @@ data:
 trainer:
   monitor_metric: val/loss
   monitor_mode: min
-

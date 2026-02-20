@@ -3,16 +3,17 @@
 from typing import Dict, Optional
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 
 from biosignals.models.backbones.conv1d import ConvEncoder1D
 from biosignals.models.heads.classification import ClassificationHead
 
+
 class DeepEncoderClassifier(nn.Module):
     """
     Deeper version of EncoderClassifier with more layers and residual connections.
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -26,7 +27,7 @@ class DeepEncoderClassifier(nn.Module):
         self.primary_modality = str(primary_modality)
         # Use deeper encoder
         self.encoder = ConvEncoder1D(in_channels=in_channels, emb_dim=emb_dim, depth=depth)
-        
+
         # Add additional processing layers
         self.extra_layers = nn.Sequential(
             nn.Conv1d(emb_dim, emb_dim, kernel_size=3, padding=1),
@@ -38,27 +39,29 @@ class DeepEncoderClassifier(nn.Module):
             nn.ReLU(),
             nn.Dropout(dropout),
         )
-        
-        self.head = ClassificationHead(in_dim=int(emb_dim), num_classes=int(num_classes), dropout=float(dropout))
+
+        self.head = ClassificationHead(
+            in_dim=int(emb_dim), num_classes=int(num_classes), dropout=float(dropout)
+        )
 
     def encode(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None):
         x = signals[self.primary_modality]
         z = self.encoder(x)  # (B,D,T)
-        
+
         # Apply additional processing with residual connection
         z_extra = self.extra_layers(z)
         z = z + z_extra  # Residual connection
-        
+
         mask_t = meta.get("mask") if meta is not None else None
         return self.head.pool(z, mask_t=mask_t)  # (B,D)
 
     def forward(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None):
         x = signals[self.primary_modality]
         z = self.encoder(x)  # (B,D,T)
-        
+
         # Apply additional processing with residual connection
         z_extra = self.extra_layers(z)
         z = z + z_extra  # Residual connection
-        
+
         mask_t = meta.get("mask") if meta is not None else None
         return self.head(z, mask_t=mask_t)  # (B,K)

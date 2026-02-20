@@ -1,5 +1,6 @@
 # src/biosignals/metrics/classification.py
 from __future__ import annotations
+
 import torch
 
 
@@ -11,8 +12,8 @@ def multilabel_exact_match_accuracy(
 ) -> torch.Tensor:
     # logits: (B,K)
     probs = logits.sigmoid()
-    pred = (probs > threshold)
-    true = (y > 0.5)
+    pred = probs > threshold
+    true = y > 0.5
     return pred.eq(true).float().mean()
 
 
@@ -24,8 +25,8 @@ def multilabel_f1_micro(
     eps: float = 1e-8,
 ) -> torch.Tensor:
     probs = logits.sigmoid()
-    pred = (probs > threshold)
-    true = (y > 0.5)
+    pred = probs > threshold
+    true = y > 0.5
 
     tp = (pred & true).sum().float()
     fp = (pred & (~true)).sum().float()

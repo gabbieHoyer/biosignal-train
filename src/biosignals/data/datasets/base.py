@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+
 from torch.utils.data import Dataset
 
 from biosignals.data.types import Sample
@@ -27,12 +28,10 @@ class BiosignalDataset(Dataset, ABC):
         return self._load_raw(idx)
 
     @abstractmethod
-    def _load_raw(self, idx: int) -> Sample:
-        ...
+    def _load_raw(self, idx: int) -> Sample: ...
 
     @abstractmethod
-    def __len__(self) -> int:
-        ...
+    def __len__(self) -> int: ...
 
 
 # -------------------------------------------------

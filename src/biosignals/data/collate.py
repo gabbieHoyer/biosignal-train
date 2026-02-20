@@ -1,8 +1,9 @@
 # src/biosignals/data/collate.py
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence, Tuple
 import math
+from collections.abc import Sequence
+from typing import Dict, List, Optional, Tuple
 
 import torch
 
@@ -39,9 +40,13 @@ def pad_stack_ct(
     c0 = int(xs[0].shape[0])
     for i, x in enumerate(xs):
         if x.ndim != 2:
-            raise ValueError(f"pad_stack_ct expects (C,T) tensors; got shape {tuple(x.shape)} at index {i}")
+            raise ValueError(
+                f"pad_stack_ct expects (C,T) tensors; got shape {tuple(x.shape)} at index {i}"
+            )
         if int(x.shape[0]) != c0:
-            raise ValueError(f"All tensors must share C. Got C={int(x.shape[0])} vs C0={c0} at index {i}")
+            raise ValueError(
+                f"All tensors must share C. Got C={int(x.shape[0])} vs C0={c0} at index {i}"
+            )
 
     lengths = torch.tensor([int(x.shape[-1]) for x in xs], dtype=torch.long)
     tmax0 = int(lengths.max().item()) if len(xs) else 0
@@ -169,8 +174,7 @@ def pad_stack_modalities(
     return signals, lengths, masks
 
 
-
-# *** Naming lock-in for the rest of the repo ***- potentially outofdate? 
+# *** Naming lock-in for the rest of the repo ***- potentially outofdate?
 
 # With this collate setup, I strongly recommend we standardize:
 

@@ -1,8 +1,9 @@
 # src/biosignals/data/transforms/aug.py
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -56,7 +57,9 @@ class RandomScale:
             x = np.asarray(out[m], dtype=np.float32)
             c = int(x.shape[0])
             if self.per_channel:
-                s = np.random.uniform(self.min_scale, self.max_scale, size=(c, 1)).astype(np.float32)
+                s = np.random.uniform(self.min_scale, self.max_scale, size=(c, 1)).astype(
+                    np.float32
+                )
                 out[m] = (x * s).astype(np.float32, copy=False)
             else:
                 s = np.float32(np.random.uniform(self.min_scale, self.max_scale))
@@ -68,7 +71,7 @@ class RandomScale:
 class RandomTimeShift:
     max_shift: int = 25
     p: float = 0.5
-    mode: str = "constant"   # "constant" or "wrap"
+    mode: str = "constant"  # "constant" or "wrap"
     fill_value: float = 0.0
     modalities: Optional[Sequence[str]] = None
 
@@ -112,7 +115,7 @@ class RandomChannelDropout:
         for m in _resolve_modalities(sample, self.modalities):
             x = np.asarray(out[m], dtype=np.float32)
             c = int(x.shape[0])
-            drop = (np.random.rand(c) < self.drop_prob)
+            drop = np.random.rand(c) < self.drop_prob
             if drop.any():
                 x2 = x.copy()
                 x2[drop, :] = np.float32(self.drop_value)
@@ -128,6 +131,7 @@ class BernoulliTimeMask:
 
     primary_modality ensures T is taken from that stream (important for multimodal dict ordering).
     """
+
     mask_ratio: float = 0.3
     p: float = 1.0
     apply: bool = False
@@ -142,7 +146,7 @@ class BernoulliTimeMask:
             return sample
 
         T = _get_T(sample, self.primary_modality)
-        mask = (np.random.rand(T) < float(self.mask_ratio))
+        mask = np.random.rand(T) < float(self.mask_ratio)
 
         meta = sample.meta
         if self.meta_key is not None:
@@ -150,7 +154,7 @@ class BernoulliTimeMask:
             if self.union_with_existing and (self.meta_key in meta2):
                 prev = np.asarray(meta2[self.meta_key]).astype(bool, copy=False)
                 if prev.shape == mask.shape:
-                    mask = (mask | prev)
+                    mask = mask | prev
             meta2[self.meta_key] = mask.astype(bool)
             meta = meta2
 
@@ -173,6 +177,7 @@ class DeterministicBernoulliTimeMask:
     Deterministic time mask based on sample.meta[seed_key] (usually "id").
     Useful for stable SSL validation.
     """
+
     mask_ratio: float = 0.3
     apply: bool = False
     mask_value: float = 0.0
@@ -188,13 +193,13 @@ class DeterministicBernoulliTimeMask:
         rng = np.random.default_rng(seed)
 
         T = _get_T(sample, self.primary_modality)
-        mask = (rng.random(T) < float(self.mask_ratio))
+        mask = rng.random(T) < float(self.mask_ratio)
 
         meta2 = _copy_meta(sample.meta)
         if self.union_with_existing and (self.meta_key in meta2):
             prev = np.asarray(meta2[self.meta_key]).astype(bool, copy=False)
             if prev.shape == mask.shape:
-                mask = (mask | prev)
+                mask = mask | prev
         meta2[self.meta_key] = mask.astype(bool)
 
         if not self.apply:
@@ -210,7 +215,7 @@ class DeterministicBernoulliTimeMask:
         return Sample(signals=out, targets=sample.targets, meta=meta2)
 
 
-# ****Important note**** about your dataset caching: 
+# ****Important note**** about your dataset caching:
 # because BiosignalDataset caches after transforms,
-# do not enable cache_dir when using random augmentations 
+# do not enable cache_dir when using random augmentations
 # (or you’ll freeze one random augmentation per sample index).

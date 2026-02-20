@@ -6,15 +6,12 @@ No API key needed — creates mock runs and verifies export structure.
 Run:
     PYTHONPATH=$PWD/src python -m pytest tests/test_dashboard.py -v
 """
+
 import json
-from pathlib import Path
 
-import pytest
-
-from biosignals.agent.feedback import FeedbackStore, EpochRecord, RunRecord
-from biosignals.agent.hooks import AutoApproveHook, ApprovalDecision, CallbackApprovalHook
 from biosignals.agent.dashboard import export_campaign_data, generate_dashboard
-
+from biosignals.agent.feedback import EpochRecord, FeedbackStore, RunRecord
+from biosignals.agent.hooks import AutoApproveHook
 
 # ─────────────────────────────────────────────────
 # Helpers: create mock runs
@@ -46,15 +43,17 @@ def _make_run(
             noise = random.uniform(-0.02, 0.02)
             val = max(0.01, base + noise)
 
-            history.append(EpochRecord(
-                epoch=e,
-                global_step=e * 100,
-                train={"loss": val * 0.9, "mae": val * 0.85},
-                val={"loss": val, "mae": val},
-                monitor_metric=monitor_metric,
-                monitor_mode=monitor_mode,
-                monitor_value=val,
-            ))
+            history.append(
+                EpochRecord(
+                    epoch=e,
+                    global_step=e * 100,
+                    train={"loss": val * 0.9, "mae": val * 0.85},
+                    val={"loss": val, "mae": val},
+                    monitor_metric=monitor_metric,
+                    monitor_mode=monitor_mode,
+                    monitor_value=val,
+                )
+            )
 
     return RunRecord(
         run_dir=run_dir,
@@ -80,32 +79,62 @@ def _make_run(
 def _make_campaign_store() -> FeedbackStore:
     """Create a realistic 5-run campaign."""
     store = FeedbackStore()
-    store.add_run(_make_run(
-        run_dir="/tmp/run1", model_name="EncoderClassifier",
-        lr=0.0003, epochs=5, best_value=50.73, best_epoch=4,
-        overrides=["experiment=galaxyppg_hr_ppg", "trainer=fast_dev"],
-    ))
-    store.add_run(_make_run(
-        run_dir="/tmp/run2", model_name="EncoderClassifier",
-        lr=0.001, epochs=10, best_value=10.94, best_epoch=9,
-        overrides=["experiment=galaxyppg_hr_ppg", "trainer.lr=0.001", "trainer.epochs=10"],
-    ))
-    store.add_run(_make_run(
-        run_dir="/tmp/run3", model_name="Transformer1D",
-        lr=0.001, epochs=10, best_value=15.22, best_epoch=7,
-        overrides=["model=transformer1d", "trainer.lr=0.001"],
-    ))
-    store.add_run(_make_run(
-        run_dir="/tmp/run4", model_name="EncoderClassifier",
-        lr=0.0005, epochs=20, best_value=8.31, best_epoch=17,
-        converged=True,
-        overrides=["experiment=galaxyppg_hr_ppg", "trainer.lr=0.0005", "trainer.epochs=20"],
-    ))
-    store.add_run(_make_run(
-        run_dir="/tmp/run5", model_name="ResNet1DDeep",
-        lr=0.0005, epochs=20, best_value=7.12, best_epoch=18,
-        overrides=["model=resnet1d_deep", "trainer.lr=0.0005", "trainer.epochs=20"],
-    ))
+    store.add_run(
+        _make_run(
+            run_dir="/tmp/run1",
+            model_name="EncoderClassifier",
+            lr=0.0003,
+            epochs=5,
+            best_value=50.73,
+            best_epoch=4,
+            overrides=["experiment=galaxyppg_hr_ppg", "trainer=fast_dev"],
+        )
+    )
+    store.add_run(
+        _make_run(
+            run_dir="/tmp/run2",
+            model_name="EncoderClassifier",
+            lr=0.001,
+            epochs=10,
+            best_value=10.94,
+            best_epoch=9,
+            overrides=["experiment=galaxyppg_hr_ppg", "trainer.lr=0.001", "trainer.epochs=10"],
+        )
+    )
+    store.add_run(
+        _make_run(
+            run_dir="/tmp/run3",
+            model_name="Transformer1D",
+            lr=0.001,
+            epochs=10,
+            best_value=15.22,
+            best_epoch=7,
+            overrides=["model=transformer1d", "trainer.lr=0.001"],
+        )
+    )
+    store.add_run(
+        _make_run(
+            run_dir="/tmp/run4",
+            model_name="EncoderClassifier",
+            lr=0.0005,
+            epochs=20,
+            best_value=8.31,
+            best_epoch=17,
+            converged=True,
+            overrides=["experiment=galaxyppg_hr_ppg", "trainer.lr=0.0005", "trainer.epochs=20"],
+        )
+    )
+    store.add_run(
+        _make_run(
+            run_dir="/tmp/run5",
+            model_name="ResNet1DDeep",
+            lr=0.0005,
+            epochs=20,
+            best_value=7.12,
+            best_epoch=18,
+            overrides=["model=resnet1d_deep", "trainer.lr=0.0005", "trainer.epochs=20"],
+        )
+    )
     return store
 
 
@@ -195,8 +224,10 @@ class TestGenerateDashboard:
     def test_creates_json_file(self, tmp_path):
         store = _make_campaign_store()
         generate_dashboard(
-            store, output_dir=tmp_path,
-            campaign_goal="test", open_browser=False,
+            store,
+            output_dir=tmp_path,
+            campaign_goal="test",
+            open_browser=False,
         )
 
         json_path = tmp_path / "campaign_data.json"
@@ -212,8 +243,10 @@ class TestGenerateDashboard:
         hook("run2", store)
 
         html_path = generate_dashboard(
-            store, approval_hook=hook,
-            output_dir=tmp_path, open_browser=False,
+            store,
+            approval_hook=hook,
+            output_dir=tmp_path,
+            open_browser=False,
         )
 
         content = html_path.read_text()
@@ -222,8 +255,10 @@ class TestGenerateDashboard:
     def test_empty_store(self, tmp_path):
         store = FeedbackStore()
         html_path = generate_dashboard(
-            store, output_dir=tmp_path,
-            campaign_goal="empty test", open_browser=False,
+            store,
+            output_dir=tmp_path,
+            campaign_goal="empty test",
+            open_browser=False,
         )
 
         assert html_path.exists()

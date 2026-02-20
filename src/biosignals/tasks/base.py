@@ -1,17 +1,20 @@
 # src/biosignals/tasks/base.py
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List
+from collections.abc import Callable
+from typing import Dict, List
 
 import torch
+
 from biosignals.data.types import Batch, Sample
+
 
 class Task(ABC):
     name: str
 
     @abstractmethod
-    def collate_fn(self) -> Callable[[List[Sample]], Batch]:
-        ...
+    def collate_fn(self) -> Callable[[List[Sample]], Batch]: ...
 
     @abstractmethod
     def training_step(self, model: torch.nn.Module, batch: Batch) -> Dict[str, torch.Tensor]:
@@ -23,8 +26,7 @@ class Task(ABC):
 
     @abstractmethod
     @torch.no_grad()
-    def validation_step(self, model: torch.nn.Module, batch: Batch) -> Dict[str, torch.Tensor]:
-        ...
+    def validation_step(self, model: torch.nn.Module, batch: Batch) -> Dict[str, torch.Tensor]: ...
 
 
 # tasks own collation: cleanly supports segmentation/detection with potentially different batching needs

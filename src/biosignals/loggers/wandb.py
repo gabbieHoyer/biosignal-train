@@ -1,8 +1,9 @@
 # src/biosignals/loggers/wandb.py
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional
 
 from biosignals.loggers.base import ExperimentLogger
 
@@ -48,12 +49,14 @@ class WandbLogger(ExperimentLogger):
         if self._run is None:
             return
         import wandb
+
         wandb.log(metrics, step=step)
 
     def log_artifact(self, path: str, *, name: Optional[str] = None) -> None:
         if self._run is None:
             return
         import wandb
+
         # simplest: upload file
         wandb.save(path)
 

@@ -1,7 +1,8 @@
 # src/biosignals/metrics/base.py
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, Sequence, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import torch
@@ -68,7 +69,7 @@ class Metric:
     def compute(self) -> torch.Tensor:
         raise NotImplementedError
 
-    def to(self, device: torch.device) -> "Metric":
+    def to(self, device: torch.device) -> Metric:
         for k, v in list(self.__dict__.items()):
             if isinstance(v, torch.Tensor):
                 self.__dict__[k] = v.to(device)
@@ -91,7 +92,9 @@ class MeanMetric(Metric):
         self.total = torch.tensor(0.0, device=self.total.device)
         self.count = torch.tensor(0.0, device=self.count.device)
 
-    def update(self, value: Any, target: Any = None, n: Optional[int] = None, **kwargs: Any) -> None:
+    def update(
+        self, value: Any, target: Any = None, n: Optional[int] = None, **kwargs: Any
+    ) -> None:
         v = _extract_from_mapping(value, self.value_key, fallbacks=("loss", "value", self.name))
         if isinstance(v, Mapping):
             raise TypeError(
@@ -110,7 +113,7 @@ class MeanMetric(Metric):
     def compute(self) -> torch.Tensor:
         if float(self.count.item()) == 0.0:
             return torch.tensor(float("nan"), device=self.total.device)
-        return (self.total / self.count)
+        return self.total / self.count
 
 
 class Accuracy(Metric):
@@ -147,7 +150,9 @@ class Accuracy(Metric):
 
     def update(self, preds: Any, target: Any = None, **kwargs: Any) -> None:
         p = _extract_from_mapping(preds, self.pred_key, fallbacks=("logits", "preds", "y_pred"))
-        y = _extract_from_mapping(target, self.target_key, fallbacks=("y", "label", "labels", "target"))
+        y = _extract_from_mapping(
+            target, self.target_key, fallbacks=("y", "label", "labels", "target")
+        )
 
         if isinstance(p, Mapping):
             raise TypeError(
@@ -195,7 +200,7 @@ class Accuracy(Metric):
     def compute(self) -> torch.Tensor:
         if float(self.total.item()) == 0.0:
             return torch.tensor(float("nan"), device=self.correct.device)
-        return (self.correct / self.total)
+        return self.correct / self.total
 
 
 class MetricCollection:
@@ -208,7 +213,7 @@ class MetricCollection:
         for m in self.metrics.values():
             m.reset()
 
-    def to(self, device: torch.device) -> "MetricCollection":
+    def to(self, device: torch.device) -> MetricCollection:
         for m in self.metrics.values():
             m.to(device)
         return self

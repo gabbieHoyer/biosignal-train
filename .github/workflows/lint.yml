@@ -1,0 +1,42 @@
+name: Lint
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # Option 1: run pre-commit (recommended: ensures CI == local)
+      - name: Pre-commit (all files)
+        run: pre-commit run --all-files --show-diff-on-failure
+
+      # Option 2: explicit checks (optional; pre-commit already runs these hooks)
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Ruff (format check)
+        run: ruff format --check .
+
+      - name: Mypy
+        run: mypy src

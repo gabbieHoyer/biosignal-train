@@ -13,5 +13,3 @@ val:
   transforms:
     - _target_: biosignals.data.transforms.signal_ops.EnsureFloat32
     - _target_: biosignals.data.transforms.signal_ops.ZScorePerChannel
-
-

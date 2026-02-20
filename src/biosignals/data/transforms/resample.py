@@ -1,16 +1,18 @@
 # src/biosignals/data/transforms/resample.py
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional
 
 import numpy as np
+
 from biosignals.data.types import Sample
 
 try:
     from scipy.signal import resample_poly
-except Exception as e:  # pragma: no cover
+except Exception:  # pragma: no cover
     resample_poly = None  # type: ignore
 
 
@@ -30,7 +32,9 @@ def _pad_to_length(x: np.ndarray, T: int, pad_value: float) -> np.ndarray:
     if cur > T:
         return x[..., :T]
     pad = T - cur
-    return np.pad(x, pad_width=((0, 0), (0, pad)), mode="constant", constant_values=float(pad_value))
+    return np.pad(
+        x, pad_width=((0, 0), (0, pad)), mode="constant", constant_values=float(pad_value)
+    )
 
 
 @dataclass
@@ -51,6 +55,7 @@ class ResampleToPrimary:
       match_length: "primary" | "min" | "none"
       pad_value: used when padding to match length
     """
+
     primary_modality: str = "ppg"
     modalities: Optional[Sequence[str]] = None
     fs_key: str = "fs"
@@ -63,7 +68,9 @@ class ResampleToPrimary:
 
     def __call__(self, sample: Sample) -> Sample:
         if resample_poly is None:
-            raise ImportError("scipy is required for ResampleToPrimary (scipy.signal.resample_poly).")
+            raise ImportError(
+                "scipy is required for ResampleToPrimary (scipy.signal.resample_poly)."
+            )
 
         if self.primary_modality not in sample.signals:
             return sample
@@ -111,7 +118,9 @@ class ResampleToPrimary:
             # crop/pad everyone to primary length
             signals[self.primary_modality] = _pad_to_length(x_p, T_p, self.pad_value)
             for m in mods:
-                signals[m] = _pad_to_length(np.asarray(signals[m], dtype=np.float32), T_p, self.pad_value)
+                signals[m] = _pad_to_length(
+                    np.asarray(signals[m], dtype=np.float32), T_p, self.pad_value
+                )
             meta["aligned_len"] = int(T_p)
             meta["aligned_to"] = self.primary_modality
 
@@ -128,4 +137,3 @@ class ResampleToPrimary:
             raise ValueError("match_length must be one of: 'primary', 'min', 'none'")
 
         return Sample(signals=signals, targets=sample.targets, meta=meta)
-

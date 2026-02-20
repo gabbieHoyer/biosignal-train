@@ -1,6 +1,8 @@
 # src/biosignals/data/datasets/ecg_npz.py
 from __future__ import annotations
+
 from pathlib import Path
+
 import numpy as np
 
 from biosignals.data.datasets.base import BiosignalDataset
@@ -13,6 +15,7 @@ Example 1: single-modality ECG in NPZ
 
 """
 
+
 class EcgNpZDataset(BiosignalDataset):
     """
     Expected structure:
@@ -23,6 +26,7 @@ class EcgNpZDataset(BiosignalDataset):
         val/
           ...
     """
+
     def __init__(self, root: str, split: str) -> None:
         super().__init__(split=split)
         self.root = Path(root) / split
@@ -35,6 +39,6 @@ class EcgNpZDataset(BiosignalDataset):
         fp = self.files[idx]
         data = np.load(fp, allow_pickle=True)
         x = data["x"].astype(np.float32)  # (C,T)
-        y = data["y"]                     # (K,) or scalar
+        y = data["y"]  # (K,) or scalar
         meta = {"id": fp.stem, "fs": float(data.get("fs", 500.0))}
         return Sample(signals={"main": x}, targets={"y": y}, meta=meta)

@@ -1,20 +1,22 @@
 # src/biosignals/tasks/classification.py
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Dict, List
+from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
 
-from biosignals.data.types import Batch, Sample
-from biosignals.tasks.base import Task
 from biosignals.data.collate import pad_stack_ct
-
+from biosignals.data.types import Batch, Sample
 from biosignals.metrics.classification import (
+    multiclass_accuracy,
     multilabel_exact_match_accuracy,
     multilabel_f1_micro,
-    multiclass_accuracy,
 )
+from biosignals.tasks.base import Task
+
 
 @dataclass
 class ClassificationTask(Task):
@@ -38,7 +40,7 @@ class ClassificationTask(Task):
                 xs = [torch.from_numpy(s.signals[m]) for s in samples]  # (C,T)
                 x_pad, lengths, mask = pad_stack_ct(xs, pad_value=0.0)
                 signals[m] = x_pad
-                masks[m] = mask                 # (B,T) valid mask
+                masks[m] = mask  # (B,T) valid mask
                 lengths_by_modality[m] = lengths
 
             # Resolve primary modality (fallback to first available)
@@ -54,12 +56,11 @@ class ClassificationTask(Task):
                 y = torch.tensor([int(s.targets["y"]) for s in samples], dtype=torch.long)  # (B,)
 
             meta = {
-                "lengths": lengths_by_modality[pm],         # (B,)
-                "lengths_by_modality": lengths_by_modality, # Dict[str,(B,)]
-                "mask_by_modality": masks,                  # Dict[str,(B,T)]
-                "mask": masks[pm],                          # (B,T) for primary modality
+                "lengths": lengths_by_modality[pm],  # (B,)
+                "lengths_by_modality": lengths_by_modality,  # Dict[str,(B,)]
+                "mask_by_modality": masks,  # Dict[str,(B,T)]
+                "mask": masks[pm],  # (B,T) for primary modality
                 "ids": [s.meta.get("id") for s in samples],
-
                 "sample_meta": [s.meta for s in samples],
                 "subject_ids": [s.meta.get("subject_id") for s in samples],
                 "record_ids": [s.meta.get("record_id") or s.meta.get("npz_id") for s in samples],

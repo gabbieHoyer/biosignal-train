@@ -1,5 +1,6 @@
 # src/biosignals/models/architectures/multimodal_fusion.py
 from __future__ import annotations
+
 from typing import Dict, Optional
 
 import torch
@@ -21,7 +22,7 @@ def _masked_mean_pool(z: torch.Tensor, mask_t: Optional[torch.Tensor]) -> torch.
 def _resample_mask(mask_t: torch.Tensor, T_out: int) -> torch.Tensor:
     m = mask_t.float().unsqueeze(1)  # (B,1,T)
     m2 = F.interpolate(m, size=int(T_out), mode="nearest")
-    return (m2.squeeze(1) > 0.5)
+    return m2.squeeze(1) > 0.5
 
 
 class LateFusionClassifier(nn.Module):
@@ -32,6 +33,7 @@ class LateFusionClassifier(nn.Module):
     Encoders may output:
       - (B,D) OR (B,D,T)
     """
+
     def __init__(
         self,
         encoders: Dict[str, nn.Module],
@@ -84,12 +86,16 @@ class LateFusionClassifier(nn.Module):
             elif z.ndim == 2:
                 embs.append(z)
             else:
-                raise ValueError(f"Encoder for modality '{m}' returned shape {tuple(z.shape)}; expected (B,D) or (B,D,T).")
+                raise ValueError(
+                    f"Encoder for modality '{m}' returned shape {tuple(z.shape)}; expected (B,D) or (B,D,T)."
+                )
 
-        z_cat = torch.cat(embs, dim=-1)     # (B, M*D)
-        z_fused = self.fusion(z_cat)        # (B, D)
+        z_cat = torch.cat(embs, dim=-1)  # (B, M*D)
+        z_fused = self.fusion(z_cat)  # (B, D)
         return z_fused
 
-    def forward(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None) -> torch.Tensor:
+    def forward(
+        self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None
+    ) -> torch.Tensor:
         z = self.encode(signals, meta)
         return self.head(z)  # (B,K)

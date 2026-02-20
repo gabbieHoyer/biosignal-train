@@ -1,17 +1,19 @@
 # src/biosignals/tasks/detection.py
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Dict, List
+from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
 
-from biosignals.data.types import Batch, Sample
 from biosignals.data.collate import pad_stack_ct
+from biosignals.data.types import Batch, Sample
 from biosignals.metrics.detection import (
     extract_events_from_probs,
-    match_events_with_tolerance,
     f1_from_counts,
+    match_events_with_tolerance,
 )
 from biosignals.tasks.base import Task
 
@@ -45,7 +47,7 @@ class DetectionTask(Task):
             fs_list = [float(s.meta.get("fs", 1.0)) for s in samples]
 
             y_dense = torch.zeros((len(samples), 1, int(tmax)), dtype=torch.float32)
-            for i, (evts, fs) in enumerate(zip(events_list, fs_list)):
+            for i, (evts, fs) in enumerate(zip(events_list, fs_list, strict=False)):
                 # each event dict expected: {"start": int, "end": int} in sample indices
                 for e in evts:
                     s_idx = int(e["start"])
@@ -73,7 +75,9 @@ class DetectionTask(Task):
         y = batch.targets["y_dense"]  # (B,1,T)
         w = mask.unsqueeze(1).float()
 
-        loss = F.binary_cross_entropy_with_logits(logits, y, weight=w, reduction="sum") / (w.sum() + 1e-6)
+        loss = F.binary_cross_entropy_with_logits(logits, y, weight=w, reduction="sum") / (
+            w.sum() + 1e-6
+        )
 
         # quick proxy metric: average prob on positives
         probs = logits.sigmoid()

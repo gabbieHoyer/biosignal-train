@@ -1,13 +1,12 @@
 # src/biosignals/engine/loops.py
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple, Set
+from typing import Any, Dict, Set, Tuple
 
 import torch
 from torch.cuda.amp import GradScaler, autocast
 
 from biosignals.utils.distributed import is_distributed, is_main_process
-
 
 SUM_KEYS_DEFAULT: Set[str] = {"tp", "fp", "fn"}
 
@@ -103,7 +102,7 @@ def _finalize(
     # Detection: compute global F1 from aggregated counts
     if all(k in out for k in ("tp", "fp", "fn")):
         tp, fp, fn = out["tp"], out["fp"], out["fn"]
-        denom2 = (2 * tp + fp + fn)
+        denom2 = 2 * tp + fp + fn
         out["event_f1"] = (2 * tp / denom2) if denom2 > 0 else 0.0
 
     return out
@@ -189,6 +188,4 @@ def evaluate_one_epoch(
     return _finalize(sums, total, sum_keys=sum_keys)
 
 
-
 # -----------------------------------------------
-

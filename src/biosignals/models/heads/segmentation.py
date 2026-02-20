@@ -1,6 +1,8 @@
 # src/biosignals/models/heads/segmentation.py
 from __future__ import annotations
+
 from dataclasses import dataclass
+
 import torch
 from torch import nn
 

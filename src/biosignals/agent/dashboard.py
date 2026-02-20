@@ -25,6 +25,7 @@ Usage:
     # Or from CLI:
     python -m biosignals.agent.dashboard --campaign-json campaign_data.json
 """
+
 from __future__ import annotations
 
 import json
@@ -32,7 +33,7 @@ import logging
 import webbrowser
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     from biosignals.agent.feedback import FeedbackStore
@@ -46,9 +47,9 @@ log = logging.getLogger("biosignals.agent")
 
 
 def export_campaign_data(
-    feedback_store: "FeedbackStore",
+    feedback_store: FeedbackStore,
     *,
-    approval_hook: Optional["ApprovalHook"] = None,
+    approval_hook: Optional[ApprovalHook] = None,
     campaign_goal: str = "",
     agent_summary: str = "",
 ) -> Dict[str, Any]:
@@ -82,20 +83,14 @@ def export_campaign_data(
             "failed": run.failed,
             "overrides": run.overrides,
             "timestamp": run.timestamp,
-            "training_curve": [
-                {"epoch": e, "value": round(v, 6)} for e, v in curve
-            ],
+            "training_curve": [{"epoch": e, "value": round(v, 6)} for e, v in curve],
         }
 
         # Add final train/val metrics if available
         if run.epoch_history:
             last = run.epoch_history[-1]
-            detail["final_train_metrics"] = {
-                k: round(v, 6) for k, v in last.train.items()
-            }
-            detail["final_val_metrics"] = {
-                k: round(v, 6) for k, v in (last.val or {}).items()
-            }
+            detail["final_train_metrics"] = {k: round(v, 6) for k, v in last.train.items()}
+            detail["final_val_metrics"] = {k: round(v, 6) for k, v in (last.val or {}).items()}
 
         run_details.append(detail)
 
@@ -660,9 +655,9 @@ init();
 
 
 def generate_dashboard(
-    feedback_store: "FeedbackStore",
+    feedback_store: FeedbackStore,
     *,
-    approval_hook: Optional["ApprovalHook"] = None,
+    approval_hook: Optional[ApprovalHook] = None,
     output_dir: str | Path = ".",
     campaign_goal: str = "",
     agent_summary: str = "",
@@ -729,13 +724,16 @@ def generate_dashboard(
 # CLI entrypoint
 # ─────────────────────────────────────────────────
 
+
 def main() -> None:
     """Generate dashboard from a campaign_data.json file."""
     import argparse
 
     parser = argparse.ArgumentParser(description="Generate campaign dashboard")
     parser.add_argument(
-        "--campaign-json", type=str, default="campaign_data.json",
+        "--campaign-json",
+        type=str,
+        default="campaign_data.json",
         help="Path to campaign_data.json",
     )
     parser.add_argument("--output", type=str, default=".", help="Output directory")

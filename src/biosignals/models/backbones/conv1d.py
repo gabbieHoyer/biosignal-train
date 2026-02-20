@@ -1,13 +1,16 @@
 # src/biosignals/models/backbones/conv1d.py
 from __future__ import annotations
+
 import torch
 from torch import nn
+
 
 class ConvEncoder1D(nn.Module):
     """
     Simple conv encoder:
       (B,C,T) -> (B,D,T)
     """
+
     def __init__(self, in_channels: int, emb_dim: int = 256, depth: int = 4) -> None:
         super().__init__()
         layers = []

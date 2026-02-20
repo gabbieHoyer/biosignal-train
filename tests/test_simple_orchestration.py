@@ -9,10 +9,12 @@ Run from project root:
 Or run directly:
     PYTHONPATH=$PWD/src python tests/test_simple_orchestration.py
 """
+
 import os
+
 import pytest
 
-from biosignals.agent import run_experiment_loop, build_agent, get_feedback_store
+from biosignals.agent import build_agent, get_feedback_store, run_experiment_loop
 
 
 @pytest.mark.integration

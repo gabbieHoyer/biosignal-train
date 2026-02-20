@@ -1,8 +1,9 @@
 # src/biosignals/data/datasets/wrappers.py
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional, Any
+from typing import Any, Optional
 
 import torch
 from torch.utils.data import Dataset

@@ -7,20 +7,14 @@ against mock artifacts matching the real trainer.py output format.
 Run from project root:
     PYTHONPATH=$PWD/src python -m pytest tests/test_feedback_store.py -v
 """
-import json
-import tempfile
-from pathlib import Path
 
-import pytest
+import json
+from pathlib import Path
 
 from biosignals.agent.feedback import (
     FeedbackStore,
-    RunRecord,
-    DriftReport,
-    EpochRecord,
     parse_run_dir,
 )
-
 
 # ─────────────────────────────────────────────────
 # Fixtures: create mock run directories matching
@@ -98,18 +92,20 @@ def _make_epoch_records(
     for i in range(n_epochs):
         val_mae = start_mae - (improvement_per_epoch * i)
         train_mae = val_mae - 0.5  # train slightly better than val
-        records.append({
-            "epoch": i,
-            "global_step": (i + 1) * 100,
-            "train": {"loss": 0.5 - (0.03 * i), "mae": train_mae},
-            "val": {"loss": 0.4 - (0.02 * i), "mae": val_mae},
-            "monitor": {
-                "metric": monitor_metric,
-                "mode": monitor_mode,
-                "value": val_mae,
-            },
-            "data": None,
-        })
+        records.append(
+            {
+                "epoch": i,
+                "global_step": (i + 1) * 100,
+                "train": {"loss": 0.5 - (0.03 * i), "mae": train_mae},
+                "val": {"loss": 0.4 - (0.02 * i), "mae": val_mae},
+                "monitor": {
+                    "metric": monitor_metric,
+                    "mode": monitor_mode,
+                    "value": val_mae,
+                },
+                "data": None,
+            }
+        )
     return records
 
 
@@ -224,12 +220,14 @@ class TestFeedbackStore:
         store = FeedbackStore()
 
         # Runs getting progressively worse (higher MAE for min metric)
-        for i, (name, best_val) in enumerate([
-            ("r1", 5.0),
-            ("r2", 5.5),
-            ("r3", 6.5),
-            ("r4", 8.0),
-        ]):
+        for i, (name, best_val) in enumerate(
+            [
+                ("r1", 5.0),
+                ("r2", 5.5),
+                ("r3", 6.5),
+                ("r4", 8.0),
+            ]
+        ):
             e = _make_epoch_records(3, start_mae=best_val + 2)
             d = _make_run_dir(tmp_path, name, e, best_epoch=2, best_value=best_val)
             store.add_run_dir(d)

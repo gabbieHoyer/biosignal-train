@@ -6,17 +6,14 @@ No API key needed — tests config scanning against a mock config directory.
 Run from project root:
     PYTHONPATH=$PWD/src python -m pytest tests/test_config_discovery.py -v
 """
-import tempfile
-from pathlib import Path
 
 import pytest
 
 from biosignals.agent.tools import (
     _find_config_root,
-    _summarize_yaml_config,
     _read_yaml_safe,
+    _summarize_yaml_config,
 )
-
 
 # ─────────────────────────────────────────────────
 # Fixtures: mock config directory
@@ -69,35 +66,23 @@ def mock_config_dir(tmp_path):
     # trainer/
     trainer_dir = configs / "trainer"
     trainer_dir.mkdir()
-    (trainer_dir / "default.yaml").write_text(
-        "lr: 0.0003\nepochs: 20\nbatch_size: 64\namp: true\n"
-    )
+    (trainer_dir / "default.yaml").write_text("lr: 0.0003\nepochs: 20\nbatch_size: 64\namp: true\n")
     (trainer_dir / "fast_dev.yaml").write_text(
         "lr: 0.0003\nepochs: 2\nbatch_size: 32\namp: false\n"
     )
-    (trainer_dir / "long.yaml").write_text(
-        "lr: 0.0001\nepochs: 100\nbatch_size: 64\namp: true\n"
-    )
+    (trainer_dir / "long.yaml").write_text("lr: 0.0001\nepochs: 100\nbatch_size: 64\namp: true\n")
 
     # dataset/
     ds_dir = configs / "dataset"
     ds_dir.mkdir()
-    (ds_dir / "ecg_npz.yaml").write_text(
-        "_target_: biosignals.data.datasets.EcgNpzDataset\n"
-    )
-    (ds_dir / "galaxyppg.yaml").write_text(
-        "_target_: biosignals.data.datasets.GalaxyPPGDataset\n"
-    )
+    (ds_dir / "ecg_npz.yaml").write_text("_target_: biosignals.data.datasets.EcgNpzDataset\n")
+    (ds_dir / "galaxyppg.yaml").write_text("_target_: biosignals.data.datasets.GalaxyPPGDataset\n")
 
     # task/
     task_dir = configs / "task"
     task_dir.mkdir()
-    (task_dir / "classification.yaml").write_text(
-        "_target_: biosignals.tasks.ClassificationTask\n"
-    )
-    (task_dir / "regression.yaml").write_text(
-        "_target_: biosignals.tasks.RegressionTask\n"
-    )
+    (task_dir / "classification.yaml").write_text("_target_: biosignals.tasks.ClassificationTask\n")
+    (task_dir / "regression.yaml").write_text("_target_: biosignals.tasks.RegressionTask\n")
 
     # transforms/ (nested)
     tr_dir = configs / "transforms"
@@ -176,6 +161,7 @@ class TestListAvailableConfigs:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import list_available_configs
+
         # smolagents @tool creates a SimpleTool; .forward() calls the function
         result = list_available_configs.forward()
 
@@ -189,6 +175,7 @@ class TestListAvailableConfigs:
     def test_shows_model_names(self, mock_config_dir, monkeypatch):
         monkeypatch.chdir(mock_config_dir)
         from biosignals.agent.tools import list_available_configs
+
         result = list_available_configs.forward()
 
         assert "resnet1d" in result
@@ -198,6 +185,7 @@ class TestListAvailableConfigs:
     def test_shows_experiment_names(self, mock_config_dir, monkeypatch):
         monkeypatch.chdir(mock_config_dir)
         from biosignals.agent.tools import list_available_configs
+
         result = list_available_configs.forward()
 
         assert "galaxyppg_hr_ppg" in result
@@ -206,6 +194,7 @@ class TestListAvailableConfigs:
     def test_shows_nested_transforms(self, mock_config_dir, monkeypatch):
         monkeypatch.chdir(mock_config_dir)
         from biosignals.agent.tools import list_available_configs
+
         result = list_available_configs.forward()
 
         assert "ecg/basic" in result
@@ -216,6 +205,7 @@ class TestListAvailableConfigs:
         empty.mkdir()
         monkeypatch.chdir(empty)
         from biosignals.agent.tools import list_available_configs
+
         result = list_available_configs.forward()
         assert "ERROR" in result
 
@@ -229,29 +219,38 @@ class TestSuggestSearchSpace:
     def _make_run(self, tmp_path, mock_config_dir, best_val=8.0, lr=0.0003, epochs=5):
         """Create a mock run directory for suggestion testing."""
         import json
+
         run_dir = tmp_path / "run_for_suggest"
         run_dir.mkdir(parents=True, exist_ok=True)
 
         records = []
         for i in range(epochs):
             val = best_val + (epochs - i) * 0.5
-            records.append({
-                "epoch": i, "global_step": (i + 1) * 100,
-                "train": {"loss": val - 0.5, "mae": val - 1},
-                "val": {"loss": val, "mae": val},
-                "monitor": {"metric": "val/mae", "mode": "min", "value": val},
-            })
+            records.append(
+                {
+                    "epoch": i,
+                    "global_step": (i + 1) * 100,
+                    "train": {"loss": val - 0.5, "mae": val - 1},
+                    "val": {"loss": val, "mae": val},
+                    "monitor": {"metric": "val/mae", "mode": "min", "value": val},
+                }
+            )
 
         with open(run_dir / "metrics.jsonl", "w") as f:
             for r in records:
                 f.write(json.dumps(r) + "\n")
 
         import json as j
-        (run_dir / "summary.json").write_text(j.dumps({
-            "monitor": {"metric": "val/mae", "mode": "min"},
-            "best": {"epoch": epochs - 1, "value": best_val, "ckpt_path": "best.pt"},
-            "last": {"epoch": epochs - 1, "ckpt_path": "last.pt"},
-        }))
+
+        (run_dir / "summary.json").write_text(
+            j.dumps(
+                {
+                    "monitor": {"metric": "val/mae", "mode": "min"},
+                    "best": {"epoch": epochs - 1, "value": best_val, "ckpt_path": "best.pt"},
+                    "last": {"epoch": epochs - 1, "ckpt_path": "last.pt"},
+                }
+            )
+        )
 
         (run_dir / "config_resolved.yaml").write_text(
             f"task:\n  _target_: biosignals.tasks.RegressionTask\n  name: regression\n"
@@ -267,6 +266,7 @@ class TestSuggestSearchSpace:
         run_dir = self._make_run(tmp_path, mock_config_dir)
 
         from biosignals.agent.tools import suggest_search_space
+
         result = suggest_search_space.forward(run_dir=str(run_dir))
 
         # Should suggest trying other models
@@ -278,6 +278,7 @@ class TestSuggestSearchSpace:
         run_dir = self._make_run(tmp_path, mock_config_dir, lr=0.0003)
 
         from biosignals.agent.tools import suggest_search_space
+
         result = suggest_search_space.forward(run_dir=str(run_dir))
 
         assert "trainer.lr=" in result
@@ -287,6 +288,7 @@ class TestSuggestSearchSpace:
         run_dir = self._make_run(tmp_path, mock_config_dir, epochs=3)
 
         from biosignals.agent.tools import suggest_search_space
+
         result = suggest_search_space.forward(run_dir=str(run_dir))
 
         assert "epochs" in result.lower()
@@ -296,6 +298,7 @@ class TestSuggestSearchSpace:
         run_dir = self._make_run(tmp_path, mock_config_dir)
 
         from biosignals.agent.tools import suggest_search_space
+
         result = suggest_search_space.forward(run_dir=str(run_dir))
 
         assert "default" in result or "fast_dev" in result or "long" in result

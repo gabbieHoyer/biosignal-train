@@ -114,7 +114,7 @@ def _interp_to_grid(t_grid: np.ndarray, t_obs: np.ndarray, y_obs: np.ndarray) ->
 
     # drop duplicates
     keep = np.ones_like(t_obs, dtype=bool)
-    keep[1:] = (t_obs[1:] != t_obs[:-1])
+    keep[1:] = t_obs[1:] != t_obs[:-1]
     t_obs = t_obs[keep]
     y_obs = y_obs[keep]
 
@@ -172,7 +172,9 @@ def _subject_dirs(raw_root: Path) -> List[Path]:
     return out
 
 
-def _make_subject_splits(subjects: List[str], seed: int, train: float, val: float, test: float) -> Dict[str, str]:
+def _make_subject_splits(
+    subjects: List[str], seed: int, train: float, val: float, test: float
+) -> Dict[str, str]:
     if abs((train + val + test) - 1.0) > 1e-6:
         raise ValueError("train+val+test must sum to 1.0")
     rng = np.random.default_rng(int(seed))
@@ -197,8 +199,15 @@ def _make_subject_splits(subjects: List[str], seed: int, train: float, val: floa
 # Main standardizer
 # -----------------------------
 def main() -> None:
-    ap = argparse.ArgumentParser("Standardize GalaxyPPG -> subjects NPZ + views/windows.parquet (v1)")
-    ap.add_argument("--raw_root", type=str, required=True, help="GalaxyPPG/Dataset directory containing Meta.csv and Pxx/")
+    ap = argparse.ArgumentParser(
+        "Standardize GalaxyPPG -> subjects NPZ + views/windows.parquet (v1)"
+    )
+    ap.add_argument(
+        "--raw_root",
+        type=str,
+        required=True,
+        help="GalaxyPPG/Dataset directory containing Meta.csv and Pxx/",
+    )
     ap.add_argument("--out_root", type=str, default="data/standardized/galaxyppg/v1")
 
     ap.add_argument("--fs_out", type=float, default=64.0)
@@ -296,7 +305,11 @@ def main() -> None:
         try:
             ppg = _read_ppg_csv(ppg_path) if ppg_path.exists() else None
             acc = _read_acc_csv(acc_path) if acc_path.exists() else None
-            hr = _read_polar_hr_csv(hr_path, tz_offset_hours=float(args.polar_tz_offset_hours)) if hr_path.exists() else None
+            hr = (
+                _read_polar_hr_csv(hr_path, tz_offset_hours=float(args.polar_tz_offset_hours))
+                if hr_path.exists()
+                else None
+            )
         except Exception as e:
             print(f"[skip] {subj}: load error: {e}")
             continue
@@ -331,13 +344,21 @@ def main() -> None:
             continue
 
         # Resample onto uniform grid
-        t_grid, ppg_u = _resample_uniform(ppg["t_ms"].to_numpy(), ppg["ppg"].to_numpy(), args.fs_out, t_start, t_end)
+        t_grid, ppg_u = _resample_uniform(
+            ppg["t_ms"].to_numpy(), ppg["ppg"].to_numpy(), args.fs_out, t_start, t_end
+        )
         if t_grid.size == 0:
             continue
 
-        _, ax = _resample_uniform(acc["t_ms"].to_numpy(), acc["x"].to_numpy(), args.fs_out, t_start, t_end)
-        _, ay = _resample_uniform(acc["t_ms"].to_numpy(), acc["y"].to_numpy(), args.fs_out, t_start, t_end)
-        _, az = _resample_uniform(acc["t_ms"].to_numpy(), acc["z"].to_numpy(), args.fs_out, t_start, t_end)
+        _, ax = _resample_uniform(
+            acc["t_ms"].to_numpy(), acc["x"].to_numpy(), args.fs_out, t_start, t_end
+        )
+        _, ay = _resample_uniform(
+            acc["t_ms"].to_numpy(), acc["y"].to_numpy(), args.fs_out, t_start, t_end
+        )
+        _, az = _resample_uniform(
+            acc["t_ms"].to_numpy(), acc["z"].to_numpy(), args.fs_out, t_start, t_end
+        )
         acc_u = np.stack([ax, ay, az], axis=0).astype(np.float32, copy=False)  # (3,T)
 
         # Build per-sample session_id on grid
@@ -356,7 +377,7 @@ def main() -> None:
         np.savez_compressed(
             npz_path,
             ppg=ppg_u.astype(np.float32, copy=False)[None, :],  # (1,T)
-            acc=acc_u,                                          # (3,T)
+            acc=acc_u,  # (3,T)
             session_id=session_id_seq,
             t_ms=t_grid.astype(np.float64, copy=False),
             fs=np.array([float(args.fs_out)], dtype=np.float32),

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict
 
 import numpy as np
 import torch
@@ -63,7 +63,9 @@ class TemperatureResult:
     nll_after: float
 
 
-def fit_temperature(logits: np.ndarray, y_true: np.ndarray, max_iter: int = 50) -> TemperatureResult:
+def fit_temperature(
+    logits: np.ndarray, y_true: np.ndarray, max_iter: int = 50
+) -> TemperatureResult:
     """
     Fit a single temperature scalar on validation logits to minimize NLL.
     """
@@ -94,7 +96,9 @@ def fit_temperature(logits: np.ndarray, y_true: np.ndarray, max_iter: int = 50) 
     return TemperatureResult(temperature=temp, nll_before=nll_before, nll_after=nll_after)
 
 
-def calibration_summary(logits: np.ndarray, y_true: np.ndarray, temperature: float, n_bins: int = 15) -> Dict[str, float]:
+def calibration_summary(
+    logits: np.ndarray, y_true: np.ndarray, temperature: float, n_bins: int = 15
+) -> Dict[str, float]:
     probs = softmax_np(apply_temperature(logits, temperature))
     return {
         "nll": nll_from_logits(apply_temperature(logits, temperature), y_true),

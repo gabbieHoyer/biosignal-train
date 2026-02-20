@@ -1,13 +1,15 @@
 # src/biosignals/tasks/segmentation.py
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Dict, List
+from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
 
+from biosignals.data.collate import pad_labels_kt, pad_labels_t, pad_stack_ct
 from biosignals.data.types import Batch, Sample
-from biosignals.data.collate import pad_stack_ct, pad_labels_t, pad_labels_kt
 from biosignals.metrics.segmentation import dice_multiclass
 from biosignals.tasks.base import Task
 
@@ -19,6 +21,7 @@ class SegmentationTask(Task):
       - multiclass per-sample labels: y is (T,) int in [0..K-1]
       - multilabel per-sample labels: y is (K, T) float in {0,1}
     """
+
     name: str = "segmentation"
     num_classes: int = 2
     multilabel: bool = False
@@ -43,10 +46,12 @@ class SegmentationTask(Task):
 
             # Targets
             if self.multilabel:
-                ys = [torch.as_tensor(s.targets["y"], dtype=torch.float32) for s in samples]  # (K,T)
+                ys = [
+                    torch.as_tensor(s.targets["y"], dtype=torch.float32) for s in samples
+                ]  # (K,T)
                 y_pad = pad_labels_kt(ys, tmax=int(tmax))
             else:
-                ys = [torch.as_tensor(s.targets["y"], dtype=torch.long) for s in samples]     # (T,)
+                ys = [torch.as_tensor(s.targets["y"], dtype=torch.long) for s in samples]  # (T,)
                 y_pad = pad_labels_t(ys, tmax=int(tmax), ignore_index=self.ignore_index)
 
             meta = {
@@ -67,16 +72,22 @@ class SegmentationTask(Task):
             y = batch.targets["y"]  # (B,K,T)
             # mask broadcast to (B,1,T)
             w = mask.unsqueeze(1).float()
-            loss = F.binary_cross_entropy_with_logits(logits, y, weight=w, reduction="sum") / (w.sum() + 1e-6)
+            loss = F.binary_cross_entropy_with_logits(logits, y, weight=w, reduction="sum") / (
+                w.sum() + 1e-6
+            )
             # simple metric: mean prob on positives (toy)
             prob = logits.sigmoid()
-            metric = (prob[y > 0.5].mean() if (y > 0.5).any() else torch.tensor(0.0, device=logits.device))
+            metric = (
+                prob[y > 0.5].mean() if (y > 0.5).any() else torch.tensor(0.0, device=logits.device)
+            )
             return {"loss": loss, "pos_prob": metric}
 
         # multiclass
         y = batch.targets["y"]  # (B,T), padded with ignore_index
         loss = F.cross_entropy(logits, y, ignore_index=self.ignore_index)
-        dice = dice_multiclass(logits, y, mask=mask & (y != self.ignore_index), num_classes=self.num_classes)
+        dice = dice_multiclass(
+            logits, y, mask=mask & (y != self.ignore_index), num_classes=self.num_classes
+        )
         return {"loss": loss, "dice": dice}
 
     @torch.no_grad()

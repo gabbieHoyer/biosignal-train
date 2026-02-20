@@ -27,11 +27,12 @@ Requires:
     zenml experiment-tracker register mlflow_tracker --flavor=mlflow
     zenml stack register agent_stack -e mlflow_tracker ... (or use default)
 """
+
 from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 log = logging.getLogger("biosignals.agent")
 
@@ -145,13 +146,13 @@ def evaluate_best(agent_results: Dict[str, Any]) -> Dict[str, Any]:
         mode = r.get("mode", "min")
         if val is None:
             continue
-        if best_value is None:
-            best_value = val
-            best_run_info = r
-        elif mode == "min" and val < best_value:
-            best_value = val
-            best_run_info = r
-        elif mode == "max" and val > best_value:
+        if (
+            best_value is None
+            or mode == "min"
+            and val < best_value
+            or mode == "max"
+            and val > best_value
+        ):
             best_value = val
             best_run_info = r
 
@@ -261,8 +262,9 @@ def feedback_driven_pipeline(
 def _try_mlflow_register(run_info: Dict[str, Any]) -> None:
     """Best-effort model registration in MLflow."""
     try:
-        import mlflow
         from pathlib import Path
+
+        import mlflow
 
         run_dir = run_info.get("run_dir")
         if not run_dir:
@@ -289,7 +291,9 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Run feedback-driven experiment pipeline")
-    parser.add_argument("--goal", type=str, required=True, help="Experiment goal in natural language")
+    parser.add_argument(
+        "--goal", type=str, required=True, help="Experiment goal in natural language"
+    )
     parser.add_argument("--budget", type=int, default=3, help="Max training runs")
     parser.add_argument("--model-id", type=str, default="anthropic/claude-sonnet-4-20250514")
     parser.add_argument("--no-zenml", action="store_true", help="Skip ZenML, run directly")

@@ -22,5 +22,3 @@ logging:
   level: INFO
 
 seed: 42
-
-

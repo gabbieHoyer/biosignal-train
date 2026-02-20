@@ -1,14 +1,15 @@
 # src/biosignals/tasks/ssl_masked_recon.py
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List
 
 import numpy as np
 import torch
 
-from biosignals.data.types import Batch, Sample
 from biosignals.data.collate import pad_stack_ct
+from biosignals.data.types import Batch, Sample
 from biosignals.tasks.base import Task
 
 """
@@ -19,13 +20,14 @@ Conventions:
   - optional batch.meta["ssl_mask"] is the reconstruction mask (B,T) bool
 """
 
+
 @dataclass
 class MaskedReconstructionTask(Task):
     name: str = "ssl_masked_recon"
     primary_modality: str = "main"
     mask_ratio: float = 0.3
     mask_value: float = 0.0
-    ssl_mask_meta_key: str = "ssl_mask"   # produced by transforms if enabled
+    ssl_mask_meta_key: str = "ssl_mask"  # produced by transforms if enabled
 
     def collate_fn(self) -> Callable[[List[Sample]], Batch]:
         def collate(samples: List[Sample]) -> Batch:
@@ -49,7 +51,10 @@ class MaskedReconstructionTask(Task):
             # Optional: bring precomputed ssl masks from Sample meta into batch meta
             # Expect per-sample shape (T,) bool numpy array
             if all(self.ssl_mask_meta_key in s.meta for s in samples):
-                ssl_masks_np = [np.asarray(s.meta[self.ssl_mask_meta_key]).astype(bool, copy=False) for s in samples]
+                ssl_masks_np = [
+                    np.asarray(s.meta[self.ssl_mask_meta_key]).astype(bool, copy=False)
+                    for s in samples
+                ]
                 T_max = int(signals[self.primary_modality].shape[-1])
                 ssl_pad = torch.zeros((len(samples), T_max), dtype=torch.bool)
                 for i, msk in enumerate(ssl_masks_np):
@@ -65,7 +70,7 @@ class MaskedReconstructionTask(Task):
 
     def training_step(self, model: torch.nn.Module, batch: Batch) -> Dict[str, torch.Tensor]:
         x = batch.signals[self.primary_modality]  # (B,C,T)
-        valid = batch.meta["mask"]                # (B,T) bool
+        valid = batch.meta["mask"]  # (B,T) bool
         b, c, t = x.shape
 
         # Prefer transform-provided ssl mask if present; else generate randomly
@@ -86,7 +91,9 @@ class MaskedReconstructionTask(Task):
             elif "x_hat" in out:
                 x_hat = out["x_hat"]
             else:
-                raise KeyError("MaskedReconstructionTask expects model to return tensor or dict with key 'recon'/'x_hat'.")
+                raise KeyError(
+                    "MaskedReconstructionTask expects model to return tensor or dict with key 'recon'/'x_hat'."
+                )
         else:
             x_hat = out
 

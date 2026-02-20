@@ -23,6 +23,7 @@ You'd emit signals={"ppg": (C,T), "acc": (C,T)} and the rest of the pipeline rem
 
 """
 
+
 def _as_float32(a: Any) -> np.ndarray:
     arr = np.asarray(a)
     if arr.dtype == object:
@@ -50,7 +51,7 @@ def _to_ct(x: Any, *, name: str) -> np.ndarray:
     raise ValueError(f"Unsupported {name} shape {arr.shape}; expected 1D or 2D.")
 
 
-def _stack_time_columns(df: "pd.DataFrame", cols: List[str]) -> np.ndarray:
+def _stack_time_columns(df: pd.DataFrame, cols: List[str]) -> np.ndarray:
     """
     Stack columns that represent channels with rows as time:
       df[cols] -> (T, C) -> transpose to (C, T)

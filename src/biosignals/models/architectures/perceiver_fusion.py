@@ -1,6 +1,8 @@
 # src/biosignals/models/architectures/perceiver_fusion.py
 from __future__ import annotations
-from typing import Dict, List, Mapping, Optional
+
+from collections.abc import Mapping
+from typing import Dict, List, Optional
 
 import torch
 from torch import nn
@@ -12,6 +14,7 @@ class PerceiverFusionClassifier(nn.Module):
     """
     End-to-end classifier: PerceiverFusionEncoder -> Linear head
     """
+
     def __init__(
         self,
         modalities: List[str],
@@ -42,6 +45,8 @@ class PerceiverFusionClassifier(nn.Module):
     def encode(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None) -> torch.Tensor:
         return self.encoder(signals, meta)
 
-    def forward(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None) -> torch.Tensor:
+    def forward(
+        self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None
+    ) -> torch.Tensor:
         z = self.encode(signals, meta)
         return self.head(z)

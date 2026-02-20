@@ -3,14 +3,16 @@
 from typing import Dict, Optional
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+
 
 class CNNTransformerRegressor(nn.Module):
     """
     Hybrid CNN-Transformer for PPG heart rate regression.
     Uses CNN to extract local features, then Transformer for long-range dependencies.
     """
+
     def __init__(
         self,
         in_channels: int = 12,
@@ -23,7 +25,7 @@ class CNNTransformerRegressor(nn.Module):
     ) -> None:
         super().__init__()
         self.primary_modality = str(primary_modality)
-        
+
         # CNN feature extractor
         self.conv_layers = nn.Sequential(
             nn.Conv1d(in_channels, 64, kernel_size=7, stride=2, padding=3),
@@ -36,21 +38,21 @@ class CNNTransformerRegressor(nn.Module):
             nn.BatchNorm1d(embed_dim),
             nn.ReLU(inplace=True),
         )
-        
+
         # Positional encoding
         self.pos_encoding = nn.Parameter(torch.randn(1, 1000, embed_dim) * 0.02)
-        
+
         # Transformer layers
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim,
             nhead=num_heads,
             dim_feedforward=embed_dim * 4,
             dropout=dropout,
-            activation='relu',
-            batch_first=True
+            activation="relu",
+            batch_first=True,
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=depth)
-        
+
         # Regression head
         self.head = nn.Sequential(
             nn.AdaptiveAvgPool1d(1),
@@ -58,18 +60,20 @@ class CNNTransformerRegressor(nn.Module):
             nn.Linear(embed_dim, embed_dim // 2),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout),
-            nn.Linear(embed_dim // 2, num_classes)
+            nn.Linear(embed_dim // 2, num_classes),
         )
 
-    def forward(self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None) -> torch.Tensor:
+    def forward(
+        self, signals: Dict[str, torch.Tensor], meta: Optional[dict] = None
+    ) -> torch.Tensor:
         x = signals[self.primary_modality]  # (B, C, T)
-        
+
         # CNN feature extraction
         x = self.conv_layers(x)  # (B, embed_dim, T')
-        
+
         # Prepare for transformer: (B, embed_dim, T') -> (B, T', embed_dim)
         x = x.transpose(1, 2)
-        
+
         # Add positional encoding
         seq_len = x.size(1)
         if seq_len <= self.pos_encoding.size(1):
@@ -77,18 +81,15 @@ class CNNTransformerRegressor(nn.Module):
         else:
             # Interpolate positional encoding if sequence is longer
             pos_enc = F.interpolate(
-                self.pos_encoding.transpose(1, 2), 
-                size=seq_len, 
-                mode='linear', 
-                align_corners=False
+                self.pos_encoding.transpose(1, 2), size=seq_len, mode="linear", align_corners=False
             ).transpose(1, 2)
             x = x + pos_enc
-        
+
         # Transformer processing
         x = self.transformer(x)  # (B, T', embed_dim)
-        
+
         # Back to (B, embed_dim, T') for pooling
         x = x.transpose(1, 2)
-        
+
         # Regression head
         return self.head(x)  # (B, 1)

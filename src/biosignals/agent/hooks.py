@@ -24,14 +24,15 @@ Usage:
     # Or custom
     set_approval_hook(lambda overrides, store, run_number: ApprovalDecision("approve"))
 """
+
 from __future__ import annotations
 
-import json
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from biosignals.agent.feedback import FeedbackStore
@@ -85,7 +86,7 @@ class ApprovalHook(ABC):
     def review(
         self,
         overrides: str,
-        store: "FeedbackStore",
+        store: FeedbackStore,
         run_number: int,
     ) -> ApprovalDecision:
         """
@@ -104,7 +105,7 @@ class ApprovalHook(ABC):
     def __call__(
         self,
         overrides: str,
-        store: "FeedbackStore",
+        store: FeedbackStore,
     ) -> ApprovalDecision:
         """Called by run_training tool. Handles auto-approve and logging."""
         self._run_counter += 1
@@ -137,7 +138,9 @@ class ApprovalHook(ABC):
 
         log.info(
             "Approval hook [run %d]: %s (overrides: %s)",
-            self._run_counter, decision.action, final_overrides[:80],
+            self._run_counter,
+            decision.action,
+            final_overrides[:80],
         )
         return decision
 
@@ -186,7 +189,7 @@ class TerminalApprovalHook(ApprovalHook):
         print("\n" + "=" * 60)
         print(f"  🔬 EXPERIMENT APPROVAL — Run #{run_number}")
         print("=" * 60)
-        print(f"\n  Proposed overrides:")
+        print("\n  Proposed overrides:")
         print(f"    {overrides}")
 
         # Show experiment history context
@@ -194,8 +197,10 @@ class TerminalApprovalHook(ApprovalHook):
             best = store.best_run()
             print(f"\n  History: {store.n_runs} runs completed")
             if best:
-                print(f"  Current best: {best.best_monitor_value:.4f} "
-                      f"({best.monitor_metric} {best.monitor_mode})")
+                print(
+                    f"  Current best: {best.best_monitor_value:.4f} "
+                    f"({best.monitor_metric} {best.monitor_mode})"
+                )
                 print(f"    Config: {best.model_name} lr={best.lr}")
 
             drift = store.detect_drift()
@@ -205,9 +210,9 @@ class TerminalApprovalHook(ApprovalHook):
                 print(f"  ⚠ STAGNATION: {drift.reasons[0] if drift.reasons else ''}")
             print(f"  Recommendation: {drift.recommendation}")
         else:
-            print(f"\n  (First run — no history yet)")
+            print("\n  (First run — no history yet)")
 
-        print(f"\n  Commands: [y]es  [n]o  [m] <new overrides>  [a]uto-approve-all  [?]help")
+        print("\n  Commands: [y]es  [n]o  [m] <new overrides>  [a]uto-approve-all  [?]help")
         print("-" * 60)
 
         while True:
@@ -265,7 +270,7 @@ class CallbackApprovalHook(ApprovalHook):
 
     def __init__(
         self,
-        callback: Callable[[str, "FeedbackStore", int], ApprovalDecision],
+        callback: Callable[[str, FeedbackStore, int], ApprovalDecision],
     ) -> None:
         super().__init__()
         self._callback = callback

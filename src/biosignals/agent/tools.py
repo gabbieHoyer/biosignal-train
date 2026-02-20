@@ -25,15 +25,15 @@ Design principle:
 Each tool returns a string (required by smolagents) that the
 CodeAgent can parse and reason about.
 """
+
 from __future__ import annotations
 
 import ast
 import json
+import logging
 import os
 import re
 import subprocess
-import logging
-import textwrap
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -96,12 +96,14 @@ def run_training(overrides: str) -> str:
     if hook is not None:
         decision = hook(overrides, _feedback_store)
         if not decision.approved:
-            return json.dumps({
-                "success": False,
-                "run_dir": None,
-                "returncode": -2,
-                "error": f"Experiment rejected by human reviewer: {decision.reason}",
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "run_dir": None,
+                    "returncode": -2,
+                    "error": f"Experiment rejected by human reviewer: {decision.reason}",
+                }
+            )
         # Apply modifications if any
         if decision.action == "modify" and decision.modified_overrides:
             log.info("Human modified overrides: %s → %s", overrides, decision.modified_overrides)
@@ -122,12 +124,14 @@ def run_training(overrides: str) -> str:
             timeout=3600,  # 1 hour max per run
         )
     except subprocess.TimeoutExpired:
-        return json.dumps({
-            "success": False,
-            "run_dir": None,
-            "returncode": -1,
-            "error": "Training timed out after 3600 seconds",
-        })
+        return json.dumps(
+            {
+                "success": False,
+                "run_dir": None,
+                "returncode": -1,
+                "error": "Training timed out after 3600 seconds",
+            }
+        )
 
     # Parse run directory from Hydra output
     # Hydra prints the output dir; we can also scan for it
@@ -135,12 +139,14 @@ def run_training(overrides: str) -> str:
 
     if result.returncode != 0:
         error_tail = result.stderr[-2000:] if result.stderr else result.stdout[-2000:]
-        return json.dumps({
-            "success": False,
-            "run_dir": run_dir,
-            "returncode": result.returncode,
-            "error": error_tail,
-        })
+        return json.dumps(
+            {
+                "success": False,
+                "run_dir": run_dir,
+                "returncode": result.returncode,
+                "error": error_tail,
+            }
+        )
 
     # Register with feedback store
     if run_dir:
@@ -149,12 +155,14 @@ def run_training(overrides: str) -> str:
         except Exception as e:
             log.warning("Failed to parse run artifacts at %s: %s", run_dir, e)
 
-    return json.dumps({
-        "success": True,
-        "run_dir": run_dir,
-        "returncode": 0,
-        "error": None,
-    })
+    return json.dumps(
+        {
+            "success": True,
+            "run_dir": run_dir,
+            "returncode": 0,
+            "error": None,
+        }
+    )
 
 
 def _extract_run_dir(stdout: str, stderr: str) -> Optional[str]:
@@ -178,7 +186,9 @@ def _extract_run_dir(stdout: str, stderr: str) -> Optional[str]:
     # This works because Hydra creates timestamped directories
     outputs_root = Path("outputs")
     if outputs_root.is_dir():
-        candidates = sorted(outputs_root.rglob("config_resolved.yaml"), key=lambda p: p.stat().st_mtime)
+        candidates = sorted(
+            outputs_root.rglob("config_resolved.yaml"), key=lambda p: p.stat().st_mtime
+        )
         if candidates:
             return str(candidates[-1].parent)
 
@@ -226,13 +236,15 @@ def read_run_results(run_dir: str) -> str:
     if run.epoch_history:
         last = run.epoch_history[-1]
         lines.append("")
-        lines.append("Final train metrics: " + json.dumps(
-            {k: round(v, 6) for k, v in last.train.items()}, indent=None
-        ))
+        lines.append(
+            "Final train metrics: "
+            + json.dumps({k: round(v, 6) for k, v in last.train.items()}, indent=None)
+        )
         if last.val:
-            lines.append("Final val metrics:   " + json.dumps(
-                {k: round(v, 6) for k, v in last.val.items()}, indent=None
-            ))
+            lines.append(
+                "Final val metrics:   "
+                + json.dumps({k: round(v, 6) for k, v in last.val.items()}, indent=None)
+            )
 
     return "\n".join(lines)
 
@@ -264,12 +276,14 @@ def compare_runs(run_dirs: str) -> str:
     for d in dirs:
         try:
             run = parse_run_dir(d)
-            runs.append({
-                "dir": d,
-                "run": run,
-                "value": run.best_monitor_value,
-                "failed": run.failed,
-            })
+            runs.append(
+                {
+                    "dir": d,
+                    "run": run,
+                    "value": run.best_monitor_value,
+                    "failed": run.failed,
+                }
+            )
         except Exception as e:
             runs.append({"dir": d, "run": None, "value": float("nan"), "failed": True})
             log.warning("Failed to parse %s: %s", d, e)
@@ -443,11 +457,13 @@ def _read_yaml_safe(path: Path) -> Dict[str, Any]:
     """Read a YAML file, returning {} on any error."""
     try:
         import yaml
-        with open(path, "r", encoding="utf-8") as f:
+
+        with open(path, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     except Exception:
         try:
             from omegaconf import OmegaConf
+
             cfg = OmegaConf.load(str(path))
             return OmegaConf.to_container(cfg, resolve=False) or {}
         except Exception:
@@ -480,8 +496,11 @@ def _summarize_yaml_config(path: Path, group_name: str) -> str:
     if target:
         short_target = target.split(".")[-1]
         # Show key params
-        params = {k: v for k, v in data.items()
-                  if k != "_target_" and not k.startswith("_") and isinstance(v, (int, float, str, bool))}
+        params = {
+            k: v
+            for k, v in data.items()
+            if k != "_target_" and not k.startswith("_") and isinstance(v, (int, float, str, bool))
+        }
         param_str = ", ".join(f"{k}={v}" for k, v in list(params.items())[:4])
         return f"{name}: {short_target}({param_str})" if param_str else f"{name}: {short_target}"
 
@@ -554,11 +573,17 @@ def list_available_configs() -> str:
             config_name = str(rel).replace("\\", "/")
 
             summary = _summarize_yaml_config(ypath, group)
-            lines.append(f"   - {config_name}: {summary}" if summary != config_name else f"   - {config_name}")
+            lines.append(
+                f"   - {config_name}: {summary}"
+                if summary != config_name
+                else f"   - {config_name}"
+            )
 
     lines.append("")
     lines.append("Usage: pass these as overrides to run_training().")
-    lines.append("Example: run_training('experiment=galaxyppg_hr_ppg model=transformer1d trainer.lr=0.001')")
+    lines.append(
+        "Example: run_training('experiment=galaxyppg_hr_ppg model=transformer1d trainer.lr=0.001')"
+    )
 
     return "\n".join(lines)
 
@@ -601,8 +626,7 @@ def suggest_search_space(run_dir: str) -> str:
                 group = group_dir.name
                 yamls = sorted(group_dir.rglob("*.yaml"))
                 available[group] = [
-                    str(y.relative_to(group_dir).with_suffix("")).replace("\\", "/")
-                    for y in yamls
+                    str(y.relative_to(group_dir).with_suffix("")).replace("\\", "/") for y in yamls
                 ]
 
     lines = [
@@ -616,16 +640,19 @@ def suggest_search_space(run_dir: str) -> str:
     # ── 1. Alternative models ──
     if "model" in available:
         current_model_stem = run.model_name.lower()
-        alt_models = [m for m in available["model"]
-                      if m.lower() != current_model_stem and "/" not in m]
+        alt_models = [
+            m for m in available["model"] if m.lower() != current_model_stem and "/" not in m
+        ]
         if alt_models:
             for m in alt_models:
-                suggestions.append({
-                    "priority": "HIGH" if run.converged else "MEDIUM",
-                    "category": "model",
-                    "rationale": f"Try different architecture (current: {run.model_name})",
-                    "override": f"model={m}",
-                })
+                suggestions.append(
+                    {
+                        "priority": "HIGH" if run.converged else "MEDIUM",
+                        "category": "model",
+                        "rationale": f"Try different architecture (current: {run.model_name})",
+                        "override": f"model={m}",
+                    }
+                )
 
     # ── 2. Learning rate variations ──
     current_lr = run.lr
@@ -638,40 +665,47 @@ def suggest_search_space(run_dir: str) -> str:
 
         for lr in lr_candidates:
             direction = "lower" if lr < current_lr else "higher"
-            suggestions.append({
-                "priority": "HIGH",
-                "category": "lr",
-                "rationale": f"Try {direction} learning rate ({current_lr} → {lr})",
-                "override": f"trainer.lr={lr}",
-            })
+            suggestions.append(
+                {
+                    "priority": "HIGH",
+                    "category": "lr",
+                    "rationale": f"Try {direction} learning rate ({current_lr} → {lr})",
+                    "override": f"trainer.lr={lr}",
+                }
+            )
 
     # ── 3. Epoch count ──
     current_epochs = run.epochs_configured
     if run.converged and current_epochs < 50:
         # Already converged, more epochs probably won't help much
-        suggestions.append({
-            "priority": "LOW",
-            "category": "epochs",
-            "rationale": f"Model converged at {current_epochs} epochs — more may not help",
-            "override": f"trainer.epochs={current_epochs * 2}",
-        })
+        suggestions.append(
+            {
+                "priority": "LOW",
+                "category": "epochs",
+                "rationale": f"Model converged at {current_epochs} epochs — more may not help",
+                "override": f"trainer.epochs={current_epochs * 2}",
+            }
+        )
     elif not run.converged and current_epochs < 100:
-        suggestions.append({
-            "priority": "HIGH",
-            "category": "epochs",
-            "rationale": f"Model did NOT converge in {current_epochs} epochs — try more",
-            "override": f"trainer.epochs={min(current_epochs * 3, 100)}",
-        })
+        suggestions.append(
+            {
+                "priority": "HIGH",
+                "category": "epochs",
+                "rationale": f"Model did NOT converge in {current_epochs} epochs — try more",
+                "override": f"trainer.epochs={min(current_epochs * 3, 100)}",
+            }
+        )
 
     # ── 4. Alternative experiments ──
     if "experiment" in available:
-        alt_experiments = [e for e in available["experiment"]
-                          if "/" not in e]  # skip nested
+        alt_experiments = [e for e in available["experiment"] if "/" not in e]  # skip nested
         if alt_experiments:
             lines.append("\nAvailable experiment presets:")
             for exp in alt_experiments:
                 exp_path = config_root / "experiment" / f"{exp}.yaml"
-                summary = _summarize_yaml_config(exp_path, "experiment") if exp_path.exists() else exp
+                summary = (
+                    _summarize_yaml_config(exp_path, "experiment") if exp_path.exists() else exp
+                )
                 lines.append(f"  experiment={exp} — {summary}")
 
     # ── 5. Combination suggestions ──
@@ -679,12 +713,14 @@ def suggest_search_space(run_dir: str) -> str:
     if any(s["category"] == "model" for s in suggestions) and current_lr > 0:
         best_alt_model = next((s for s in suggestions if s["category"] == "model"), None)
         if best_alt_model:
-            suggestions.append({
-                "priority": "MEDIUM",
-                "category": "combo",
-                "rationale": "Combine new model with tuned lr",
-                "override": f"{best_alt_model['override']} trainer.lr={current_lr}",
-            })
+            suggestions.append(
+                {
+                    "priority": "MEDIUM",
+                    "category": "combo",
+                    "rationale": "Combine new model with tuned lr",
+                    "override": f"{best_alt_model['override']} trainer.lr={current_lr}",
+                }
+            )
 
     # ── 6. Diagnose issues from metrics ──
     if run.epoch_history:
@@ -695,16 +731,22 @@ def suggest_search_space(run_dir: str) -> str:
             if val_loss > 0 and train_loss > 0:
                 gap = (val_loss - train_loss) / train_loss
                 if gap > 0.5:
-                    lines.append(f"\n⚠ Overfitting detected: train_loss={train_loss:.2f}, val_loss={val_loss:.2f} (gap={gap:.0%})")
+                    lines.append(
+                        f"\n⚠ Overfitting detected: train_loss={train_loss:.2f}, val_loss={val_loss:.2f} (gap={gap:.0%})"
+                    )
                     lines.append("  Consider: fewer epochs, regularization, or more data")
                 elif gap < -0.1:
-                    lines.append(f"\n⚠ Underfitting: val_loss < train_loss — model may need more capacity or epochs")
+                    lines.append(
+                        "\n⚠ Underfitting: val_loss < train_loss — model may need more capacity or epochs"
+                    )
 
         # Check R² if available
         r2 = last.val.get("r2") if last.val else None
         if r2 is not None and r2 < 0:
             lines.append(f"\n⚠ Negative R² ({r2:.2f}): model is worse than predicting the mean.")
-            lines.append("  This strongly suggests underfitting — try more epochs, higher lr, or bigger model.")
+            lines.append(
+                "  This strongly suggests underfitting — try more epochs, higher lr, or bigger model."
+            )
 
     # ── Format suggestions ──
     # Sort by priority
@@ -762,6 +804,7 @@ _AGENT_GENERATED_MARKER = "# AUTO-GENERATED by experiment agent — do not edit 
 
 class ConfigSafetyError(ValueError):
     """Raised when a config generation request violates safety constraints."""
+
     pass
 
 
@@ -791,8 +834,15 @@ def _validate_no_code_injection(data: Dict[str, Any], path: str = "") -> None:
     and any values containing executable patterns.
     """
     dangerous_patterns = [
-        "import ", "exec(", "eval(", "__import__", "os.system",
-        "subprocess", "shutil.rmtree", "open(", "Path(",
+        "import ",
+        "exec(",
+        "eval(",
+        "__import__",
+        "os.system",
+        "subprocess",
+        "shutil.rmtree",
+        "open(",
+        "Path(",
     ]
 
     for key, value in data.items():
@@ -801,9 +851,11 @@ def _validate_no_code_injection(data: Dict[str, Any], path: str = "") -> None:
         if isinstance(value, str):
             # Check _target_ fields — must be within project namespace
             if key == "_target_":
-                if not (value.startswith("biosignals.") or
-                        value.startswith("torch.") or
-                        value.startswith("torchvision.")):
+                if not (
+                    value.startswith("biosignals.")
+                    or value.startswith("torch.")
+                    or value.startswith("torchvision.")
+                ):
                     raise ConfigSafetyError(
                         f"Unsafe _target_ at '{full_key}': '{value}'. "
                         f"Must start with biosignals., torch., or torchvision."
@@ -812,8 +864,7 @@ def _validate_no_code_injection(data: Dict[str, Any], path: str = "") -> None:
             for pattern in dangerous_patterns:
                 if pattern in value:
                     raise ConfigSafetyError(
-                        f"Potentially dangerous value at '{full_key}': "
-                        f"contains '{pattern}'"
+                        f"Potentially dangerous value at '{full_key}': " f"contains '{pattern}'"
                     )
 
         elif isinstance(value, dict):
@@ -836,6 +887,7 @@ def _write_yaml_config(path: Path, data: Dict[str, Any], comment: str = "") -> N
     """Write a dict as YAML to disk with safety marker."""
     try:
         import yaml
+
         content = _AGENT_GENERATED_MARKER
         if comment:
             content += f"# {comment}\n"
@@ -964,36 +1016,52 @@ def create_config_variant(group: str, base_config: str, new_name: str, modificat
 
         config_root = _find_config_root()
         if config_root is None:
-            return json.dumps({
-                "success": False, "config_path": None, "config_name": None,
-                "override_syntax": None,
-                "error": "Cannot find Hydra config directory.",
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "config_path": None,
+                    "config_name": None,
+                    "override_syntax": None,
+                    "error": "Cannot find Hydra config directory.",
+                }
+            )
 
         # ── Read base config ──
         base_path = config_root / group / f"{base_config}.yaml"
         if not base_path.exists():
             # Try nested path (e.g., transforms/ecg/basic)
-            base_path = config_root / group / f"{base_config.replace('/', os.sep)}.yaml" if os.sep != "/" else base_path
+            base_path = (
+                config_root / group / f"{base_config.replace('/', os.sep)}.yaml"
+                if os.sep != "/"
+                else base_path
+            )
             if not base_path.exists():
                 available = [
                     str(p.relative_to(config_root / group).with_suffix(""))
                     for p in (config_root / group).rglob("*.yaml")
                 ]
-                return json.dumps({
-                    "success": False, "config_path": None, "config_name": None,
-                    "override_syntax": None,
-                    "error": f"Base config '{group}/{base_config}.yaml' not found. "
-                             f"Available in {group}/: {available}",
-                })
+                return json.dumps(
+                    {
+                        "success": False,
+                        "config_path": None,
+                        "config_name": None,
+                        "override_syntax": None,
+                        "error": f"Base config '{group}/{base_config}.yaml' not found. "
+                        f"Available in {group}/: {available}",
+                    }
+                )
 
         base_data = _read_yaml_safe(base_path)
         if not base_data:
-            return json.dumps({
-                "success": False, "config_path": None, "config_name": None,
-                "override_syntax": None,
-                "error": f"Failed to parse base config at {base_path}",
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "config_path": None,
+                    "config_name": None,
+                    "override_syntax": None,
+                    "error": f"Failed to parse base config at {base_path}",
+                }
+            )
 
         # ── Preserve _target_ (safety boundary) ──
         original_target = base_data.get("_target_")
@@ -1001,12 +1069,16 @@ def create_config_variant(group: str, base_config: str, new_name: str, modificat
         # ── Apply modifications ──
         mods = _parse_modifications(modifications)
         if "_target_" in mods:
-            return json.dumps({
-                "success": False, "config_path": None, "config_name": None,
-                "override_syntax": None,
-                "error": "Cannot modify _target_ — this would change the Python "
-                         "implementation class. Only parameter changes are allowed.",
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "config_path": None,
+                    "config_name": None,
+                    "override_syntax": None,
+                    "error": "Cannot modify _target_ — this would change the Python "
+                    "implementation class. Only parameter changes are allowed.",
+                }
+            )
 
         # Deep merge modifications into base
         def _deep_merge(base: Dict, updates: Dict) -> Dict:
@@ -1033,12 +1105,16 @@ def create_config_variant(group: str, base_config: str, new_name: str, modificat
         if new_path.exists():
             existing = new_path.read_text(encoding="utf-8")
             if _AGENT_GENERATED_MARKER not in existing:
-                return json.dumps({
-                    "success": False, "config_path": None, "config_name": None,
-                    "override_syntax": None,
-                    "error": f"Config '{group}/{new_name}.yaml' already exists and was NOT "
-                             f"agent-generated. Refusing to overwrite human-authored config.",
-                })
+                return json.dumps(
+                    {
+                        "success": False,
+                        "config_path": None,
+                        "config_name": None,
+                        "override_syntax": None,
+                        "error": f"Config '{group}/{new_name}.yaml' already exists and was NOT "
+                        f"agent-generated. Refusing to overwrite human-authored config.",
+                    }
+                )
             overwrite_warning = " (overwrote previous agent-generated version)"
 
         # ── Write ──
@@ -1048,27 +1124,39 @@ def create_config_variant(group: str, base_config: str, new_name: str, modificat
         override_syntax = f"{group}={new_name}"
         log.info("Created config variant: %s → %s%s", base_path, new_path, overwrite_warning)
 
-        return json.dumps({
-            "success": True,
-            "config_path": str(new_path),
-            "config_name": new_name,
-            "override_syntax": override_syntax,
-            "error": None,
-            "message": f"Created {group}/{new_name}.yaml based on {base_config}. "
-                       f"Use with: run_training('{override_syntax} ...'){overwrite_warning}",
-        })
+        return json.dumps(
+            {
+                "success": True,
+                "config_path": str(new_path),
+                "config_name": new_name,
+                "override_syntax": override_syntax,
+                "error": None,
+                "message": f"Created {group}/{new_name}.yaml based on {base_config}. "
+                f"Use with: run_training('{override_syntax} ...'){overwrite_warning}",
+            }
+        )
 
     except ConfigSafetyError as e:
-        return json.dumps({
-            "success": False, "config_path": None, "config_name": None,
-            "override_syntax": None, "error": f"SAFETY: {e}",
-        })
+        return json.dumps(
+            {
+                "success": False,
+                "config_path": None,
+                "config_name": None,
+                "override_syntax": None,
+                "error": f"SAFETY: {e}",
+            }
+        )
     except Exception as e:
         log.exception("create_config_variant failed")
-        return json.dumps({
-            "success": False, "config_path": None, "config_name": None,
-            "override_syntax": None, "error": str(e),
-        })
+        return json.dumps(
+            {
+                "success": False,
+                "config_path": None,
+                "config_name": None,
+                "override_syntax": None,
+                "error": str(e),
+            }
+        )
 
 
 # ─────────────────────────────────────────────────
@@ -1111,11 +1199,15 @@ def compose_experiment_config(name: str, components: str, extra_overrides: str) 
 
         config_root = _find_config_root()
         if config_root is None:
-            return json.dumps({
-                "success": False, "config_path": None, "config_name": None,
-                "override_syntax": None,
-                "error": "Cannot find Hydra config directory.",
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "config_path": None,
+                    "config_name": None,
+                    "override_syntax": None,
+                    "error": "Cannot find Hydra config directory.",
+                }
+            )
 
         # ── Parse components ──
         comp_pairs = {}
@@ -1126,27 +1218,39 @@ def compose_experiment_config(name: str, components: str, extra_overrides: str) 
             comp_pairs[group] = config_name
 
         if not comp_pairs:
-            return json.dumps({
-                "success": False, "config_path": None, "config_name": None,
-                "override_syntax": None,
-                "error": "No components specified. Provide group=config pairs, e.g., "
-                         "'model=transformer1d dataset=galaxyppg task=regression'",
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "config_path": None,
+                    "config_name": None,
+                    "override_syntax": None,
+                    "error": "No components specified. Provide group=config pairs, e.g., "
+                    "'model=transformer1d dataset=galaxyppg task=regression'",
+                }
+            )
 
         # ── Validate each component exists ──
         for group, config_name in comp_pairs.items():
             config_file = config_root / group / f"{config_name.replace('/', os.sep)}.yaml"
             if not config_file.exists():
-                available = [
-                    str(p.relative_to(config_root / group).with_suffix(""))
-                    for p in (config_root / group).rglob("*.yaml")
-                ] if (config_root / group).is_dir() else []
-                return json.dumps({
-                    "success": False, "config_path": None, "config_name": None,
-                    "override_syntax": None,
-                    "error": f"Component '{group}/{config_name}.yaml' not found. "
-                             f"Available in {group}/: {available}",
-                })
+                available = (
+                    [
+                        str(p.relative_to(config_root / group).with_suffix(""))
+                        for p in (config_root / group).rglob("*.yaml")
+                    ]
+                    if (config_root / group).is_dir()
+                    else []
+                )
+                return json.dumps(
+                    {
+                        "success": False,
+                        "config_path": None,
+                        "config_name": None,
+                        "override_syntax": None,
+                        "error": f"Component '{group}/{config_name}.yaml' not found. "
+                        f"Available in {group}/: {available}",
+                    }
+                )
 
         # ── Build experiment config ──
         # Hydra experiment configs use @package _global_ and override defaults
@@ -1183,8 +1287,10 @@ def compose_experiment_config(name: str, components: str, extra_overrides: str) 
             lines.append("")
             try:
                 import yaml
-                extras_yaml = yaml.dump(extras, default_flow_style=False,
-                                        sort_keys=False, allow_unicode=True)
+
+                extras_yaml = yaml.dump(
+                    extras, default_flow_style=False, sort_keys=False, allow_unicode=True
+                )
                 lines.append(extras_yaml.rstrip())
             except ImportError:
                 lines.append(_dict_to_yaml(extras).rstrip())
@@ -1200,12 +1306,16 @@ def compose_experiment_config(name: str, components: str, extra_overrides: str) 
         if new_path.exists():
             existing = new_path.read_text(encoding="utf-8")
             if _AGENT_GENERATED_MARKER not in existing:
-                return json.dumps({
-                    "success": False, "config_path": None, "config_name": None,
-                    "override_syntax": None,
-                    "error": f"Experiment '{name}' already exists and was NOT "
-                             f"agent-generated. Refusing to overwrite.",
-                })
+                return json.dumps(
+                    {
+                        "success": False,
+                        "config_path": None,
+                        "config_name": None,
+                        "override_syntax": None,
+                        "error": f"Experiment '{name}' already exists and was NOT "
+                        f"agent-generated. Refusing to overwrite.",
+                    }
+                )
             overwrite_warning = " (overwrote previous agent-generated version)"
 
         # ── Write ──
@@ -1214,27 +1324,39 @@ def compose_experiment_config(name: str, components: str, extra_overrides: str) 
         override_syntax = f"experiment={name}"
         log.info("Composed experiment config: %s%s", new_path, overwrite_warning)
 
-        return json.dumps({
-            "success": True,
-            "config_path": str(new_path),
-            "config_name": name,
-            "override_syntax": override_syntax,
-            "error": None,
-            "message": f"Created experiment/{name}.yaml composing [{components}]. "
-                       f"Use with: run_training('{override_syntax}'){overwrite_warning}",
-        })
+        return json.dumps(
+            {
+                "success": True,
+                "config_path": str(new_path),
+                "config_name": name,
+                "override_syntax": override_syntax,
+                "error": None,
+                "message": f"Created experiment/{name}.yaml composing [{components}]. "
+                f"Use with: run_training('{override_syntax}'){overwrite_warning}",
+            }
+        )
 
     except ConfigSafetyError as e:
-        return json.dumps({
-            "success": False, "config_path": None, "config_name": None,
-            "override_syntax": None, "error": f"SAFETY: {e}",
-        })
+        return json.dumps(
+            {
+                "success": False,
+                "config_path": None,
+                "config_name": None,
+                "override_syntax": None,
+                "error": f"SAFETY: {e}",
+            }
+        )
     except Exception as e:
         log.exception("compose_experiment_config failed")
-        return json.dumps({
-            "success": False, "config_path": None, "config_name": None,
-            "override_syntax": None, "error": str(e),
-        })
+        return json.dumps(
+            {
+                "success": False,
+                "config_path": None,
+                "config_name": None,
+                "override_syntax": None,
+                "error": str(e),
+            }
+        )
 
 
 # ═════════════════════════════════════════════════
@@ -1266,32 +1388,71 @@ def compose_experiment_config(name: str, components: str, extra_overrides: str) 
 
 # Top-level modules allowed in generated model code.
 # These are the only modules the agent can import.
-_ALLOWED_IMPORT_ROOTS = frozenset({
-    # PyTorch ecosystem
-    "torch", "torchvision", "torchaudio",
-    # Scientific computing
-    "numpy", "scipy", "einops",
-    # Python stdlib (safe subset)
-    "typing", "math", "functools", "dataclasses", "enum",
-    "abc", "collections", "itertools", "operator", "numbers",
-    # Project modules (for reusing components)
-    "biosignals",
-})
+_ALLOWED_IMPORT_ROOTS = frozenset(
+    {
+        # PyTorch ecosystem
+        "torch",
+        "torchvision",
+        "torchaudio",
+        # Scientific computing
+        "numpy",
+        "scipy",
+        "einops",
+        # Python stdlib (safe subset)
+        "typing",
+        "math",
+        "functools",
+        "dataclasses",
+        "enum",
+        "abc",
+        "collections",
+        "itertools",
+        "operator",
+        "numbers",
+        # Project modules (for reusing components)
+        "biosignals",
+    }
+)
 
 # Functions that are NEVER allowed in generated code.
-_BLOCKED_CALLS = frozenset({
-    "exec", "eval", "compile", "__import__", "breakpoint",
-    "open", "input", "print",  # I/O
-    "exit", "quit", "globals", "locals", "vars", "dir",
-    "getattr", "setattr", "delattr",  # reflection (within generated code)
-})
+_BLOCKED_CALLS = frozenset(
+    {
+        "exec",
+        "eval",
+        "compile",
+        "__import__",
+        "breakpoint",
+        "open",
+        "input",
+        "print",  # I/O
+        "exit",
+        "quit",
+        "globals",
+        "locals",
+        "vars",
+        "dir",
+        "getattr",
+        "setattr",
+        "delattr",  # reflection (within generated code)
+    }
+)
 
 # Attribute access patterns that are blocked.
 _BLOCKED_ATTR_CHAINS = [
-    "os.system", "os.popen", "os.exec", "os.remove", "os.unlink",
-    "os.rmdir", "os.makedirs", "os.path",
-    "subprocess.run", "subprocess.call", "subprocess.Popen",
-    "shutil.rmtree", "shutil.copy", "shutil.move",
+    "os.system",
+    "os.popen",
+    "os.exec",
+    "os.remove",
+    "os.unlink",
+    "os.rmdir",
+    "os.makedirs",
+    "os.path",
+    "subprocess.run",
+    "subprocess.call",
+    "subprocess.Popen",
+    "shutil.rmtree",
+    "shutil.copy",
+    "shutil.move",
     "pathlib.Path",
     "socket.socket",
     "http.client",
@@ -1299,7 +1460,9 @@ _BLOCKED_ATTR_CHAINS = [
 ]
 
 # Marker for agent-generated Python files.
-_AGENT_GENERATED_PY_MARKER = "# AUTO-GENERATED by experiment agent — validated via AST safety scan\n"
+_AGENT_GENERATED_PY_MARKER = (
+    "# AUTO-GENERATED by experiment agent — validated via AST safety scan\n"
+)
 
 # Generated models directory (relative to project src root).
 _GENERATED_MODELS_SUBPATH = Path("biosignals") / "models" / "generated"
@@ -1307,6 +1470,7 @@ _GENERATED_MODELS_SUBPATH = Path("biosignals") / "models" / "generated"
 
 class CodeSafetyError(ValueError):
     """Raised when generated code fails safety validation."""
+
     pass
 
 
@@ -1367,15 +1531,11 @@ def _ast_validate_code(code: str) -> Dict[str, Any]:
                 if chain:
                     for blocked in _BLOCKED_ATTR_CHAINS:
                         if chain.startswith(blocked) or chain == blocked:
-                            raise CodeSafetyError(
-                                f"Blocked attribute call: '{chain}()'"
-                            )
+                            raise CodeSafetyError(f"Blocked attribute call: '{chain}()'")
 
         # Global/nonlocal statements (could escape scope)
         if isinstance(node, (ast.Global, ast.Nonlocal)):
-            raise CodeSafetyError(
-                "Generated code cannot use 'global' or 'nonlocal' statements."
-            )
+            raise CodeSafetyError("Generated code cannot use 'global' or 'nonlocal' statements.")
 
     # Step 4: Find nn.Module subclass
     module_classes = []
@@ -1398,9 +1558,7 @@ def _ast_validate_code(code: str) -> Dict[str, Any]:
 
     if len(module_classes) > 1:
         names = [c.name for c in module_classes]
-        log.warning(
-            "Multiple nn.Module classes found: %s. Using the first one.", names
-        )
+        log.warning("Multiple nn.Module classes found: %s. Using the first one.", names)
 
     target_class = module_classes[0]
     class_name = target_class.name
@@ -1445,21 +1603,25 @@ def _ast_validate_code(code: str) -> Dict[str, Any]:
                     if ann_node:
                         annotation = ast.dump(ann_node)
 
-                constructor_params.append({
-                    "name": pname,
-                    "has_default": has_default,
-                    "default": default_val,
-                    "annotation": annotation,
-                })
+                constructor_params.append(
+                    {
+                        "name": pname,
+                        "has_default": has_default,
+                        "default": default_val,
+                        "annotation": annotation,
+                    }
+                )
 
             # Also handle **kwargs
             if args.kwarg:
-                constructor_params.append({
-                    "name": f"**{args.kwarg.arg}",
-                    "has_default": False,
-                    "default": None,
-                    "annotation": None,
-                })
+                constructor_params.append(
+                    {
+                        "name": f"**{args.kwarg.arg}",
+                        "has_default": False,
+                        "default": None,
+                        "annotation": None,
+                    }
+                )
             break
 
     return {
@@ -1564,9 +1726,11 @@ def read_model_source(model_name: str) -> str:
 
     config_path = config_root / "model" / f"{model_name}.yaml"
     if not config_path.exists():
-        available = [
-            p.stem for p in (config_root / "model").glob("*.yaml")
-        ] if (config_root / "model").is_dir() else []
+        available = (
+            [p.stem for p in (config_root / "model").glob("*.yaml")]
+            if (config_root / "model").is_dir()
+            else []
+        )
         return (
             f"ERROR: Model config '{model_name}' not found at {config_path}. "
             f"Available models: {available}"
@@ -1616,8 +1780,7 @@ def read_model_source(model_name: str) -> str:
         constructor_info = "(could not parse constructor)"
 
     # Step 5: Get config parameters
-    config_params = {k: v for k, v in config_data.items()
-                     if not k.startswith("_")}
+    config_params = {k: v for k, v in config_data.items() if not k.startswith("_")}
 
     lines = [
         f"Model: {model_name}",
@@ -1687,21 +1850,31 @@ def register_generated_model(name: str, code: str, constructor_args: str) -> str
         # ── Locate directories ──
         src_root = _find_source_root()
         if src_root is None:
-            return json.dumps({
-                "success": False, "model_path": None, "config_path": None,
-                "override_syntax": None, "class_name": None,
-                "constructor_params": None,
-                "error": "Cannot find project source root (directory containing biosignals/).",
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "model_path": None,
+                    "config_path": None,
+                    "override_syntax": None,
+                    "class_name": None,
+                    "constructor_params": None,
+                    "error": "Cannot find project source root (directory containing biosignals/).",
+                }
+            )
 
         config_root = _find_config_root()
         if config_root is None:
-            return json.dumps({
-                "success": False, "model_path": None, "config_path": None,
-                "override_syntax": None, "class_name": None,
-                "constructor_params": None,
-                "error": "Cannot find Hydra config directory.",
-            })
+            return json.dumps(
+                {
+                    "success": False,
+                    "model_path": None,
+                    "config_path": None,
+                    "override_syntax": None,
+                    "class_name": None,
+                    "constructor_params": None,
+                    "error": "Cannot find Hydra config directory.",
+                }
+            )
 
         gen_dir = src_root / _GENERATED_MODELS_SUBPATH
         gen_dir.mkdir(parents=True, exist_ok=True)
@@ -1721,13 +1894,18 @@ def register_generated_model(name: str, code: str, constructor_args: str) -> str
         if model_path.exists():
             existing = model_path.read_text(encoding="utf-8")
             if _AGENT_GENERATED_PY_MARKER not in existing:
-                return json.dumps({
-                    "success": False, "model_path": None, "config_path": None,
-                    "override_syntax": None, "class_name": None,
-                    "constructor_params": None,
-                    "error": f"File '{model_path}' already exists and was NOT "
-                             f"agent-generated. Refusing to overwrite.",
-                })
+                return json.dumps(
+                    {
+                        "success": False,
+                        "model_path": None,
+                        "config_path": None,
+                        "override_syntax": None,
+                        "class_name": None,
+                        "constructor_params": None,
+                        "error": f"File '{model_path}' already exists and was NOT "
+                        f"agent-generated. Refusing to overwrite.",
+                    }
+                )
             overwrite_warning = " (overwrote previous version)"
 
         # ── Write model source ──
@@ -1760,14 +1938,19 @@ def register_generated_model(name: str, code: str, constructor_args: str) -> str
         if config_path.exists():
             existing = config_path.read_text(encoding="utf-8")
             if _AGENT_GENERATED_MARKER not in existing:
-                return json.dumps({
-                    "success": False, "model_path": str(model_path),
-                    "config_path": None, "override_syntax": None,
-                    "class_name": class_name, "constructor_params": None,
-                    "error": f"Model config '{name}' already exists and was NOT "
-                             f"agent-generated. Model .py was written but config "
-                             f"was not. Delete or rename the existing config.",
-                })
+                return json.dumps(
+                    {
+                        "success": False,
+                        "model_path": str(model_path),
+                        "config_path": None,
+                        "override_syntax": None,
+                        "class_name": class_name,
+                        "constructor_params": None,
+                        "error": f"Model config '{name}' already exists and was NOT "
+                        f"agent-generated. Model .py was written but config "
+                        f"was not. Delete or rename the existing config.",
+                    }
+                )
             config_overwrite = " (config overwrote previous version)"
 
         comment = f"Generated model: {class_name} in models/generated/{name}.py"
@@ -1776,37 +1959,54 @@ def register_generated_model(name: str, code: str, constructor_args: str) -> str
         override_syntax = f"model={name}"
         log.info(
             "Registered generated model: %s (%s) → %s%s%s",
-            name, class_name, model_path, overwrite_warning, config_overwrite,
+            name,
+            class_name,
+            model_path,
+            overwrite_warning,
+            config_overwrite,
         )
 
-        return json.dumps({
-            "success": True,
-            "model_path": str(model_path),
-            "config_path": str(config_path),
-            "override_syntax": override_syntax,
-            "class_name": class_name,
-            "constructor_params": [
-                p for p in validation["constructor_params"]
-                if not p["name"].startswith("**")
-            ],
-            "error": None,
-            "message": (
-                f"Registered model '{class_name}' at {model_path}. "
-                f"Hydra config at {config_path}. "
-                f"Use with: run_training('{override_syntax} ...'){overwrite_warning}"
-            ),
-        })
+        return json.dumps(
+            {
+                "success": True,
+                "model_path": str(model_path),
+                "config_path": str(config_path),
+                "override_syntax": override_syntax,
+                "class_name": class_name,
+                "constructor_params": [
+                    p for p in validation["constructor_params"] if not p["name"].startswith("**")
+                ],
+                "error": None,
+                "message": (
+                    f"Registered model '{class_name}' at {model_path}. "
+                    f"Hydra config at {config_path}. "
+                    f"Use with: run_training('{override_syntax} ...'){overwrite_warning}"
+                ),
+            }
+        )
 
     except (CodeSafetyError, ConfigSafetyError) as e:
-        return json.dumps({
-            "success": False, "model_path": None, "config_path": None,
-            "override_syntax": None, "class_name": None,
-            "constructor_params": None, "error": f"SAFETY: {e}",
-        })
+        return json.dumps(
+            {
+                "success": False,
+                "model_path": None,
+                "config_path": None,
+                "override_syntax": None,
+                "class_name": None,
+                "constructor_params": None,
+                "error": f"SAFETY: {e}",
+            }
+        )
     except Exception as e:
         log.exception("register_generated_model failed")
-        return json.dumps({
-            "success": False, "model_path": None, "config_path": None,
-            "override_syntax": None, "class_name": None,
-            "constructor_params": None, "error": str(e),
-        })
+        return json.dumps(
+            {
+                "success": False,
+                "model_path": None,
+                "config_path": None,
+                "override_syntax": None,
+                "class_name": None,
+                "constructor_params": None,
+                "error": str(e),
+            }
+        )

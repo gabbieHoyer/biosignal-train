@@ -11,11 +11,12 @@ Provides:
   - RunRecord: structured view of a single completed run
   - FeedbackStore: accumulates runs, detects drift/stagnation, ranks experiments
 """
+
 from __future__ import annotations
 
 import json
-import math
 import logging
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -32,7 +33,7 @@ log = logging.getLogger("biosignals.agent")
 def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
     """Read a JSONL file into a list of dicts."""
     records = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
@@ -54,7 +55,7 @@ def _read_yaml_as_dict(path: Path) -> Dict[str, Any]:
     except ImportError:
         import yaml
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
 
 
@@ -306,7 +307,9 @@ class DriftReport:
             f"Stagnation: {'YES' if self.stagnation_detected else 'no'}",
             f"Runs analyzed: {self.n_runs_analyzed}",
             f"Best value: {self.best_value:.6f}" if self.best_value is not None else "Best: N/A",
-            f"Trend slope: {self.trend_slope:.6f}" if self.trend_slope is not None else "Trend: N/A",
+            f"Trend slope: {self.trend_slope:.6f}"
+            if self.trend_slope is not None
+            else "Trend: N/A",
             f"Recommendation: {self.recommendation}",
         ]
         if self.reasons:
@@ -494,9 +497,7 @@ class FeedbackStore:
         recommendation = "continue"
         if stagnation_detected and drift_detected:
             recommendation = "change_model"
-        elif drift_detected:
-            recommendation = "change_lr"
-        elif stagnation_detected:
+        elif drift_detected or stagnation_detected:
             recommendation = "change_lr"
         elif n >= 5 and not drift_detected and not stagnation_detected:
             recommendation = "continue"  # healthy exploration

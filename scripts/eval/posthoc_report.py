@@ -3,22 +3,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import re
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
 from hydra.utils import instantiate
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import DictConfig, OmegaConf
 
-import matplotlib.pyplot as plt
-
-from biosignals.data.datamodule import DataConfig, build_dataset, make_loader
+from biosignals.data.datamodule import build_dataset, make_loader
 
 
 # -------------------------
@@ -26,7 +23,7 @@ from biosignals.data.datamodule import DataConfig, build_dataset, make_loader
 # -------------------------
 def _confusion_matrix_mc(y_true: np.ndarray, y_pred: np.ndarray, k: int) -> np.ndarray:
     cm = np.zeros((k, k), dtype=np.int64)
-    for t, p in zip(y_true.tolist(), y_pred.tolist()):
+    for t, p in zip(y_true.tolist(), y_pred.tolist(), strict=False):
         if 0 <= int(t) < k and 0 <= int(p) < k:
             cm[int(t), int(p)] += 1
     return cm
@@ -118,9 +115,11 @@ def _plot_reliability(rel: Dict[str, Any], out_png: Path, title: str) -> None:
     ax.set_title(title)
 
     # annotate counts lightly
-    for x, y, c in zip(centers.tolist(), acc.tolist(), cnt.tolist()):
+    for x, y, c in zip(centers.tolist(), acc.tolist(), cnt.tolist(), strict=False):
         if c > 0:
-            ax.annotate(str(c), (x, y), textcoords="offset points", xytext=(0, 6), ha="center", fontsize=7)
+            ax.annotate(
+                str(c), (x, y), textcoords="offset points", xytext=(0, 6), ha="center", fontsize=7
+            )
 
     out_png.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
@@ -206,7 +205,11 @@ def _infer_split(
     if split in cfg.dataset and cfg.dataset[split] is not None:
         split_cfg = cfg.dataset[split]
     else:
-        base = cfg.dataset.val if ("val" in cfg.dataset and cfg.dataset.val is not None) else cfg.dataset.train
+        base = (
+            cfg.dataset.val
+            if ("val" in cfg.dataset and cfg.dataset.val is not None)
+            else cfg.dataset.train
+        )
         split_cfg = OmegaConf.copy(base)
         split_cfg.split = str(split)
 
@@ -217,7 +220,9 @@ def _infer_split(
         tf_cfg = cfg.transforms.val
 
     # build dataset via your Option-B pipeline
-    ds = build_dataset(split_cfg=split_cfg, transform_cfg=tf_cfg, cache_dir=None, cache_prefix=f"eval_{split}")
+    ds = build_dataset(
+        split_cfg=split_cfg, transform_cfg=tf_cfg, cache_dir=None, cache_prefix=f"eval_{split}"
+    )
 
     data_cfg = instantiate(cfg.data)
     if batch_size is not None:
@@ -233,8 +238,12 @@ def _infer_split(
         for batch in loader:
             # move signals/targets/meta to device (lightweight)
             batch.signals = {k: v.to(device) for k, v in batch.signals.items()}
-            batch.targets = {k: v.to(device) if torch.is_tensor(v) else v for k, v in batch.targets.items()}
-            batch.meta = {k: (v.to(device) if torch.is_tensor(v) else v) for k, v in batch.meta.items()}
+            batch.targets = {
+                k: v.to(device) if torch.is_tensor(v) else v for k, v in batch.targets.items()
+            }
+            batch.meta = {
+                k: (v.to(device) if torch.is_tensor(v) else v) for k, v in batch.meta.items()
+            }
 
             logits = model(batch.signals, batch.meta)
             y = batch.targets["y"]
@@ -274,7 +283,9 @@ def _ids_to_keys(ids: List[str]) -> pd.DataFrame:
             s0.append(int(m.group(2)))
             s1.append(int(m.group(3)))
             ok.append(True)
-    return pd.DataFrame({"id": ids, "subject_id": subj, "start_idx": s0, "end_idx": s1, "id_parsed": ok})
+    return pd.DataFrame(
+        {"id": ids, "subject_id": subj, "start_idx": s0, "end_idx": s1, "id_parsed": ok}
+    )
 
 
 def _metrics_mc_from_logits(logits: np.ndarray, y_true: np.ndarray, k: int) -> Dict[str, Any]:
@@ -305,17 +316,46 @@ def _metrics_mc_from_logits(logits: np.ndarray, y_true: np.ndarray, k: int) -> D
 
 def main() -> None:
     ap = argparse.ArgumentParser("Post-hoc evaluation + calibration report (no training changes)")
-    ap.add_argument("--run_dir", type=str, required=True, help="Hydra run dir containing config_resolved.yaml + checkpoints/")
-    ap.add_argument("--ckpt", type=str, default=None, help="Override checkpoint path (else use run_dir/checkpoints/best.pt)")
+    ap.add_argument(
+        "--run_dir",
+        type=str,
+        required=True,
+        help="Hydra run dir containing config_resolved.yaml + checkpoints/",
+    )
+    ap.add_argument(
+        "--ckpt",
+        type=str,
+        default=None,
+        help="Override checkpoint path (else use run_dir/checkpoints/best.pt)",
+    )
     ap.add_argument("--split", type=str, default="test", help="Split to evaluate: train|val|test")
-    ap.add_argument("--calibrate", action="store_true", default=True, help="Fit temperature on val and evaluate calibrated test")
+    ap.add_argument(
+        "--calibrate",
+        action="store_true",
+        default=True,
+        help="Fit temperature on val and evaluate calibrated test",
+    )
     ap.add_argument("--no_calibrate", dest="calibrate", action="store_false")
-    ap.add_argument("--calibration_split", type=str, default="val", help="Split used to fit temperature scaling")
-    ap.add_argument("--group_cols", type=str, default="sex,group_id", help="Comma-separated group columns for per-group metrics")
-    ap.add_argument("--age_bins", type=str, default="0,40,60,80,200", help="Comma-separated bin edges for age_bin")
+    ap.add_argument(
+        "--calibration_split", type=str, default="val", help="Split used to fit temperature scaling"
+    )
+    ap.add_argument(
+        "--group_cols",
+        type=str,
+        default="sex,group_id",
+        help="Comma-separated group columns for per-group metrics",
+    )
+    ap.add_argument(
+        "--age_bins",
+        type=str,
+        default="0,40,60,80,200",
+        help="Comma-separated bin edges for age_bin",
+    )
     ap.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
     ap.add_argument("--batch_size", type=int, default=None, help="Override batch size for eval")
-    ap.add_argument("--out_dir", type=str, default=None, help="Output directory (default: run_dir/posthoc)")
+    ap.add_argument(
+        "--out_dir", type=str, default=None, help="Output directory (default: run_dir/posthoc)"
+    )
 
     args = ap.parse_args()
 
@@ -330,7 +370,11 @@ def main() -> None:
     if "eval" not in cfg:
         cfg.eval = {}  # type: ignore[attr-defined]
 
-    ckpt_path = Path(args.ckpt).expanduser().resolve() if args.ckpt else (run_dir / "checkpoints" / "best.pt")
+    ckpt_path = (
+        Path(args.ckpt).expanduser().resolve()
+        if args.ckpt
+        else (run_dir / "checkpoints" / "best.pt")
+    )
     if not ckpt_path.exists():
         # fallback to last
         alt = run_dir / "checkpoints" / "last.pt"
@@ -349,15 +393,20 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # ---- inference on requested split ----
-    logits, y_true, ids, dataset_root = _infer_split(cfg=cfg, split=str(args.split), device=device, batch_size=args.batch_size)
+    logits, y_true, ids, dataset_root = _infer_split(
+        cfg=cfg, split=str(args.split), device=device, batch_size=args.batch_size
+    )
 
     # figure out number of classes
     # prefer cfg.task.num_classes if present, else infer from logits
     k = int(getattr(cfg.task, "num_classes", logits.shape[1]))
 
     base_metrics = _metrics_mc_from_logits(logits, y_true.astype(np.int64), k=k)
-    _plot_reliability(base_metrics["calibration"]["reliability"], out_dir / f"reliability_{args.split}_raw.png",
-                      title=f"Reliability ({args.split}) raw | ECE={base_metrics['calibration']['ece']:.4f}")
+    _plot_reliability(
+        base_metrics["calibration"]["reliability"],
+        out_dir / f"reliability_{args.split}_raw.png",
+        title=f"Reliability ({args.split}) raw | ECE={base_metrics['calibration']['ece']:.4f}",
+    )
 
     # ---- join predictions to windows/subjects for group slicing ----
     keys_df = _ids_to_keys(ids)
@@ -376,9 +425,13 @@ def main() -> None:
         wdf = wdf[wdf["split"].astype(str) == str(args.split)].copy()
         # prefer example_id join
         if "example_id" in wdf.columns and "id" in pred_df.columns and pred_df["id"].notna().all():
-            merged = pred_df.merge(wdf, left_on="id", right_on="example_id", how="left", suffixes=("", "_w"))
+            merged = pred_df.merge(
+                wdf, left_on="id", right_on="example_id", how="left", suffixes=("", "_w")
+            )
         else:
-            merged = pred_df.merge(wdf, on=["subject_id", "start_idx", "end_idx"], how="left", suffixes=("", "_w"))
+            merged = pred_df.merge(
+                wdf, on=["subject_id", "start_idx", "end_idx"], how="left", suffixes=("", "_w")
+            )
     else:
         merged = pred_df.copy()
 
@@ -391,7 +444,9 @@ def main() -> None:
         try:
             edges = [int(x.strip()) for x in str(args.age_bins).split(",") if x.strip() != ""]
             if len(edges) >= 2:
-                merged["age_bin"] = pd.cut(merged["age"].astype(float), bins=edges, include_lowest=True).astype(str)
+                merged["age_bin"] = pd.cut(
+                    merged["age"].astype(float), bins=edges, include_lowest=True
+                ).astype(str)
         except Exception:
             pass
 
@@ -427,14 +482,19 @@ def main() -> None:
 
     # ---- temperature scaling calibration (optional) ----
     if bool(args.calibrate):
-        logits_cal, y_cal, _, _ = _infer_split(cfg=cfg, split=str(args.calibration_split), device=device, batch_size=args.batch_size)
+        logits_cal, y_cal, _, _ = _infer_split(
+            cfg=cfg, split=str(args.calibration_split), device=device, batch_size=args.batch_size
+        )
         t = _fit_temperature_mc(logits_cal, y_cal.astype(np.int64), max_iter=100)
 
         logits_scaled = logits / float(max(t, 1e-6))
         cal_metrics = _metrics_mc_from_logits(logits_scaled, y_true.astype(np.int64), k=k)
 
-        _plot_reliability(cal_metrics["calibration"]["reliability"], out_dir / f"reliability_{args.split}_temp_scaled.png",
-                          title=f"Reliability ({args.split}) temp-scaled | T={t:.4f} | ECE={cal_metrics['calibration']['ece']:.4f}")
+        _plot_reliability(
+            cal_metrics["calibration"]["reliability"],
+            out_dir / f"reliability_{args.split}_temp_scaled.png",
+            title=f"Reliability ({args.split}) temp-scaled | T={t:.4f} | ECE={cal_metrics['calibration']['ece']:.4f}",
+        )
 
         report["calibration"] = {
             "method": "temperature_scaling",
@@ -470,4 +530,3 @@ if __name__ == "__main__":
 #   --split test \
 #   --group_cols sex,age_bin,group_id \
 #   --calibrate
-

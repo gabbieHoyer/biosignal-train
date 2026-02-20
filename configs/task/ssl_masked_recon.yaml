@@ -5,5 +5,3 @@ name: ssl_masked_recon
 mask_ratio: 0.3
 mask_value: 0.0
 primary_modality: main
-
-

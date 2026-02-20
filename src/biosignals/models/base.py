@@ -1,5 +1,6 @@
 # src/biosignals/models/base.py
 from __future__ import annotations
+
 from typing import Dict, Optional
 
 import torch
@@ -14,6 +15,7 @@ All trainable models should accept:
 Optional convention:
   encode(...) -> Tensor   (useful for embedding extraction / SSL -> finetune reuse)
 """
+
 
 class BiosignalModel(nn.Module):
     primary_modality: str = "main"

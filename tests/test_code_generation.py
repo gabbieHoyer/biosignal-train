@@ -7,6 +7,7 @@ and source reading against mock project directories.
 Run from project root:
     PYTHONPATH=$PWD/src python -m pytest tests/test_code_generation.py -v
 """
+
 import json
 import textwrap
 from pathlib import Path
@@ -14,15 +15,13 @@ from pathlib import Path
 import pytest
 
 from biosignals.agent.tools import (
-    _ast_validate_code,
-    _resolve_target_to_source,
-    _find_source_root,
     _AGENT_GENERATED_PY_MARKER,
-    _AGENT_GENERATED_MARKER,
-    _read_yaml_safe,
     CodeSafetyError,
+    _ast_validate_code,
+    _find_source_root,
+    _read_yaml_safe,
+    _resolve_target_to_source,
 )
-
 
 # ─────────────────────────────────────────────────
 # Sample model code (safe and unsafe variants)
@@ -233,7 +232,8 @@ def mock_project(tmp_path):
     (src / "biosignals" / "models").mkdir(parents=True)
     (src / "biosignals" / "__init__.py").write_text("")
     (src / "biosignals" / "models" / "__init__.py").write_text("")
-    (src / "biosignals" / "models" / "resnet.py").write_text(textwrap.dedent("""\
+    (src / "biosignals" / "models" / "resnet.py").write_text(
+        textwrap.dedent("""\
         import torch
         import torch.nn as nn
         import torch.nn.functional as F
@@ -249,8 +249,10 @@ def mock_project(tmp_path):
                 x = F.relu(self.bn1(self.conv1(x)))
                 x = x.mean(dim=-1)
                 return self.fc(x)
-    """))
-    (src / "biosignals" / "models" / "transformer.py").write_text(textwrap.dedent("""\
+    """)
+    )
+    (src / "biosignals" / "models" / "transformer.py").write_text(
+        textwrap.dedent("""\
         import torch
         import torch.nn as nn
 
@@ -263,7 +265,8 @@ def mock_project(tmp_path):
 
             def forward(self, x):
                 return self.fc(self.encoder(x).mean(dim=1))
-    """))
+    """)
+    )
 
     # Experiment and trainer configs (for compose tests)
     exp_dir = configs / "experiment"
@@ -280,15 +283,11 @@ def mock_project(tmp_path):
         "_target_: biosignals.data.datasets.GalaxyPPGDataset\n"
     )
     (configs / "task").mkdir()
-    (configs / "task" / "regression.yaml").write_text(
-        "_target_: biosignals.tasks.RegressionTask\n"
-    )
+    (configs / "task" / "regression.yaml").write_text("_target_: biosignals.tasks.RegressionTask\n")
     (configs / "transforms").mkdir()
     ppg_tr = configs / "transforms" / "galaxyppg"
     ppg_tr.mkdir()
-    (ppg_tr / "hr_ppg.yaml").write_text(
-        "_target_: biosignals.transforms.HrPpg\n"
-    )
+    (ppg_tr / "hr_ppg.yaml").write_text("_target_: biosignals.transforms.HrPpg\n")
 
     return tmp_path
 
@@ -401,6 +400,7 @@ class TestReadModelSource:
     def test_reads_resnet_source(self, mock_project, monkeypatch):
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import read_model_source
+
         result = read_model_source.forward(model_name="resnet1d")
 
         assert "ResNet1D" in result
@@ -411,6 +411,7 @@ class TestReadModelSource:
     def test_reads_transformer_source(self, mock_project, monkeypatch):
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import read_model_source
+
         result = read_model_source.forward(model_name="transformer1d")
 
         assert "Transformer1D" in result
@@ -419,6 +420,7 @@ class TestReadModelSource:
     def test_error_for_missing_model(self, mock_project, monkeypatch):
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import read_model_source
+
         result = read_model_source.forward(model_name="nonexistent_model")
 
         assert "ERROR" in result
@@ -426,6 +428,7 @@ class TestReadModelSource:
     def test_shows_constructor_params(self, mock_project, monkeypatch):
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import read_model_source
+
         result = read_model_source.forward(model_name="resnet1d")
 
         assert "__init__" in result
@@ -476,9 +479,13 @@ class TestRegisterGeneratedModel:
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import register_generated_model
 
-        result = json.loads(register_generated_model.forward(
-            name="bad_model", code=UNSAFE_EXEC_CODE, constructor_args="",
-        ))
+        result = json.loads(
+            register_generated_model.forward(
+                name="bad_model",
+                code=UNSAFE_EXEC_CODE,
+                constructor_args="",
+            )
+        )
         assert result["success"] is False
         assert "SAFETY" in result["error"]
 
@@ -486,9 +493,13 @@ class TestRegisterGeneratedModel:
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import register_generated_model
 
-        result = json.loads(register_generated_model.forward(
-            name="bad_model2", code=UNSAFE_IMPORT_CODE, constructor_args="",
-        ))
+        result = json.loads(
+            register_generated_model.forward(
+                name="bad_model2",
+                code=UNSAFE_IMPORT_CODE,
+                constructor_args="",
+            )
+        )
         assert result["success"] is False
         assert "SAFETY" in result["error"]
 
@@ -496,9 +507,13 @@ class TestRegisterGeneratedModel:
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import register_generated_model
 
-        result = json.loads(register_generated_model.forward(
-            name="no_forward", code=NO_FORWARD_CODE, constructor_args="",
-        ))
+        result = json.loads(
+            register_generated_model.forward(
+                name="no_forward",
+                code=NO_FORWARD_CODE,
+                constructor_args="",
+            )
+        )
         assert result["success"] is False
         assert "forward" in result["error"]
 
@@ -506,11 +521,13 @@ class TestRegisterGeneratedModel:
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import register_generated_model
 
-        result = json.loads(register_generated_model.forward(
-            name="../../etc/passwd",
-            code=SAFE_MINIMAL_CODE,
-            constructor_args="",
-        ))
+        result = json.loads(
+            register_generated_model.forward(
+                name="../../etc/passwd",
+                code=SAFE_MINIMAL_CODE,
+                constructor_args="",
+            )
+        )
         assert result["success"] is False
         assert "SAFETY" in result["error"]
 
@@ -519,11 +536,13 @@ class TestRegisterGeneratedModel:
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import register_generated_model
 
-        result = json.loads(register_generated_model.forward(
-            name="auto_defaults_model",
-            code=SAFE_MINIMAL_CODE,
-            constructor_args="",
-        ))
+        result = json.loads(
+            register_generated_model.forward(
+                name="auto_defaults_model",
+                code=SAFE_MINIMAL_CODE,
+                constructor_args="",
+            )
+        )
         assert result["success"] is True
 
         config_data = _read_yaml_safe(Path(result["config_path"]))
@@ -537,14 +556,19 @@ class TestRegisterGeneratedModel:
 
         # Version 1
         register_generated_model.forward(
-            name="evolving_model", code=SAFE_MINIMAL_CODE, constructor_args="d=32",
+            name="evolving_model",
+            code=SAFE_MINIMAL_CODE,
+            constructor_args="d=32",
         )
 
         # Version 2 — different code
-        result = json.loads(register_generated_model.forward(
-            name="evolving_model", code=SAFE_MODEL_CODE,
-            constructor_args="in_channels=1 num_classes=10 base_filters=64 n_blocks=4",
-        ))
+        result = json.loads(
+            register_generated_model.forward(
+                name="evolving_model",
+                code=SAFE_MODEL_CODE,
+                constructor_args="in_channels=1 num_classes=10 base_filters=64 n_blocks=4",
+            )
+        )
         assert result["success"] is True
         assert result["class_name"] == "ResNet1DDeep"
 
@@ -553,21 +577,25 @@ class TestRegisterGeneratedModel:
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import register_generated_model
 
-        result = json.loads(register_generated_model.forward(
-            name="resnet1d",  # Already exists in configs/model/
-            code=SAFE_MODEL_CODE,
-            constructor_args="in_channels=1",
-        ))
+        result = json.loads(
+            register_generated_model.forward(
+                name="resnet1d",  # Already exists in configs/model/
+                code=SAFE_MODEL_CODE,
+                constructor_args="in_channels=1",
+            )
+        )
         assert result["success"] is False
         assert "NOT agent-generated" in result["error"]
 
     def test_model_visible_in_listings(self, mock_project, monkeypatch):
         """Registered model appears in list_available_configs."""
         monkeypatch.chdir(mock_project)
-        from biosignals.agent.tools import register_generated_model, list_available_configs
+        from biosignals.agent.tools import list_available_configs, register_generated_model
 
         register_generated_model.forward(
-            name="custom_arch", code=SAFE_MINIMAL_CODE, constructor_args="d=64",
+            name="custom_arch",
+            code=SAFE_MINIMAL_CODE,
+            constructor_args="d=64",
         )
 
         listing = list_available_configs.forward()
@@ -590,9 +618,9 @@ class TestEndToEndCodeGeneration:
         """
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import (
+            compose_experiment_config,
             read_model_source,
             register_generated_model,
-            compose_experiment_config,
         )
 
         # Step 1: Read source
@@ -604,24 +632,30 @@ class TestEndToEndCodeGeneration:
         deeper_code = SAFE_MODEL_CODE  # Our pre-written deeper variant
 
         # Step 3: Register
-        reg = json.loads(register_generated_model.forward(
-            name="resnet1d_deep_v2",
-            code=deeper_code,
-            constructor_args="in_channels=1 num_classes=1 base_filters=128 n_blocks=8",
-        ))
+        reg = json.loads(
+            register_generated_model.forward(
+                name="resnet1d_deep_v2",
+                code=deeper_code,
+                constructor_args="in_channels=1 num_classes=1 base_filters=128 n_blocks=8",
+            )
+        )
         assert reg["success"] is True
 
         # Step 4: Compose experiment using the generated model
-        exp = json.loads(compose_experiment_config.forward(
-            name="ppg_deep_resnet_experiment",
-            components="model=resnet1d_deep_v2 dataset=galaxyppg task=regression trainer=default transforms=galaxyppg/hr_ppg",
-            extra_overrides="model.in_channels=1 model.num_classes=1",
-        ))
+        exp = json.loads(
+            compose_experiment_config.forward(
+                name="ppg_deep_resnet_experiment",
+                components="model=resnet1d_deep_v2 dataset=galaxyppg task=regression trainer=default transforms=galaxyppg/hr_ppg",
+                extra_overrides="model.in_channels=1 model.num_classes=1",
+            )
+        )
         assert exp["success"] is True
         assert exp["override_syntax"] == "experiment=ppg_deep_resnet_experiment"
 
         # Verify the experiment config points to the generated model
-        exp_content = (mock_project / "configs" / "experiment" / "ppg_deep_resnet_experiment.yaml").read_text()
+        exp_content = (
+            mock_project / "configs" / "experiment" / "ppg_deep_resnet_experiment.yaml"
+        ).read_text()
         assert "resnet1d_deep_v2" in exp_content
 
     def test_iterative_code_refinement(self, mock_project, monkeypatch):
@@ -634,16 +668,24 @@ class TestEndToEndCodeGeneration:
         from biosignals.agent.tools import register_generated_model
 
         # Attempt 1: bad code (no forward method)
-        r1 = json.loads(register_generated_model.forward(
-            name="iter_model", code=NO_FORWARD_CODE, constructor_args="",
-        ))
+        r1 = json.loads(
+            register_generated_model.forward(
+                name="iter_model",
+                code=NO_FORWARD_CODE,
+                constructor_args="",
+            )
+        )
         assert r1["success"] is False
         assert "forward" in r1["error"]
 
         # Attempt 2: fixed code
-        r2 = json.loads(register_generated_model.forward(
-            name="iter_model", code=SAFE_MINIMAL_CODE, constructor_args="d=64",
-        ))
+        r2 = json.loads(
+            register_generated_model.forward(
+                name="iter_model",
+                code=SAFE_MINIMAL_CODE,
+                constructor_args="d=64",
+            )
+        )
         assert r2["success"] is True
 
     def test_generated_model_target_path(self, mock_project, monkeypatch):
@@ -651,9 +693,13 @@ class TestEndToEndCodeGeneration:
         monkeypatch.chdir(mock_project)
         from biosignals.agent.tools import register_generated_model
 
-        result = json.loads(register_generated_model.forward(
-            name="my_custom_model", code=SAFE_MINIMAL_CODE, constructor_args="d=128",
-        ))
+        result = json.loads(
+            register_generated_model.forward(
+                name="my_custom_model",
+                code=SAFE_MINIMAL_CODE,
+                constructor_args="d=128",
+            )
+        )
         assert result["success"] is True
 
         config = _read_yaml_safe(Path(result["config_path"]))

@@ -1,11 +1,11 @@
 # src/biosignals/config/schema.py
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-import logging
-from omegaconf import DictConfig, MISSING, OmegaConf
+from omegaconf import MISSING, DictConfig, OmegaConf
 
 log = logging.getLogger("biosignals")
 
@@ -13,6 +13,7 @@ log = logging.getLogger("biosignals")
 # -----------------------
 # Stable, typed sections
 # -----------------------
+
 
 @dataclass
 class DistConfig:
@@ -77,6 +78,7 @@ class InitConfig:
 # -----------------------
 # Flexible Hydra nodes
 # -----------------------
+
 
 @dataclass
 class DatasetCacheConfig:
@@ -151,7 +153,10 @@ def _sanity_checks(cfg: DictConfig, *, strict: bool) -> None:
     # init validation: if init block exists, ckpt_path must be set
     init_cfg = cfg.get("init")
     if init_cfg is not None:
-        if OmegaConf.is_missing(init_cfg, "ckpt_path") or not str(init_cfg.get("ckpt_path", "")).strip():
+        if (
+            OmegaConf.is_missing(init_cfg, "ckpt_path")
+            or not str(init_cfg.get("ckpt_path", "")).strip()
+        ):
             _warn_or_raise(
                 "Config has an init block but init.ckpt_path is missing/empty. "
                 "Either remove init: entirely, or set init.ckpt_path.",

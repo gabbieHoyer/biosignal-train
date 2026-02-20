@@ -1,32 +1,37 @@
 # src/biosignals/cli/eval.py
 from __future__ import annotations
 
-import os
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import hydra
-from hydra.utils import instantiate
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig, OmegaConf
 import numpy as np
 import torch
+from hydra.core.hydra_config import HydraConfig
+from hydra.utils import instantiate
+from omegaconf import DictConfig, OmegaConf
 
 from biosignals.config.schema import validate_cfg
-from biosignals.utils.reproducibility import seed_everything, set_float32_matmul_precision
-from biosignals.utils.distributed import init_distributed, cleanup_distributed, is_distributed, get_rank, is_main_process
 from biosignals.data.datamodule import make_split_loader
-from biosignals.engine.loops import evaluate_one_epoch, batch_to_device
-from biosignals.loggers.base import NoopLogger
-
+from biosignals.engine.loops import batch_to_device, evaluate_one_epoch
 from biosignals.eval.calibration import (
-    fit_temperature,
     apply_temperature,
-    softmax_np,
     expected_calibration_error,
+    fit_temperature,
     nll_from_logits,
+    softmax_np,
 )
+from biosignals.loggers.base import NoopLogger
+from biosignals.utils.distributed import (
+    cleanup_distributed,
+    get_rank,
+    init_distributed,
+    is_distributed,
+    is_main_process,
+)
+from biosignals.utils.reproducibility import seed_everything, set_float32_matmul_precision
 
 try:
     import pandas as pd
@@ -47,7 +52,9 @@ def _extract_logits(out: Any) -> torch.Tensor:
     raise TypeError(f"Model output type not supported for prediction extraction: {type(out)}")
 
 
-def _load_checkpoint_into_model(model: torch.nn.Module, ckpt_path: Path, strict: bool = True) -> Dict[str, Any]:
+def _load_checkpoint_into_model(
+    model: torch.nn.Module, ckpt_path: Path, strict: bool = True
+) -> Dict[str, Any]:
     ckpt = torch.load(str(ckpt_path), map_location="cpu")
 
     # common checkpoint layouts
@@ -117,7 +124,9 @@ def _collect_logits_and_labels(
         logits_list.append(logits.astype(np.float32, copy=False))
         y_list.append(y_np)
 
-    logits_all = np.concatenate(logits_list, axis=0) if logits_list else np.zeros((0, 0), dtype=np.float32)
+    logits_all = (
+        np.concatenate(logits_list, axis=0) if logits_list else np.zeros((0, 0), dtype=np.float32)
+    )
     y_all = np.concatenate(y_list, axis=0) if y_list else np.zeros((0,), dtype=np.int64)
 
     return {
@@ -163,7 +172,9 @@ def _merge_gathered(packs: list[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def _save_predictions_parquet(out_path: Path, pack: Dict[str, Any], *, temperature: Optional[float] = None) -> None:
+def _save_predictions_parquet(
+    out_path: Path, pack: Dict[str, Any], *, temperature: Optional[float] = None
+) -> None:
     if pd is None:
         raise ImportError("Saving predictions requires pandas+pyarrow.")
 
@@ -231,7 +242,9 @@ def main(cfg: DictConfig) -> None:
 
         if ckpt_path is None or str(ckpt_path).strip() == "":
             if run_dir_hint is None:
-                raise ValueError("eval.ckpt_path is required (or provide eval.run_dir to auto-find checkpoints/).")
+                raise ValueError(
+                    "eval.ckpt_path is required (or provide eval.run_dir to auto-find checkpoints/)."
+                )
             cand = Path(str(run_dir_hint)).expanduser().resolve() / "checkpoints" / ckpt_name
             ckpt_path = str(cand)
 
@@ -312,7 +325,9 @@ def main(cfg: DictConfig) -> None:
                             data_cfg=data_cfg,
                             split=fit_split,
                         )
-                        fit_pack_local = _collect_logits_and_labels(model, fit_loader, device=device)
+                        fit_pack_local = _collect_logits_and_labels(
+                            model, fit_loader, device=device
+                        )
                         fit_g = _ddp_gather_object(fit_pack_local)
                         if is_distributed():
                             fit_pack = _merge_gathered(fit_g)  # type: ignore[arg-type]
@@ -320,7 +335,11 @@ def main(cfg: DictConfig) -> None:
                             fit_pack = fit_pack_local
 
                         # Fit temperature
-                        t_res = fit_temperature(fit_pack["logits"], fit_pack["y"], max_iter=int(calib_cfg.get("max_iter", 50)))
+                        t_res = fit_temperature(
+                            fit_pack["logits"],
+                            fit_pack["y"],
+                            max_iter=int(calib_cfg.get("max_iter", 50)),
+                        )
                         temp = float(t_res.temperature)
 
                         # Metrics before/after on eval split
@@ -336,24 +355,37 @@ def main(cfg: DictConfig) -> None:
                             "nll_fit_before": float(t_res.nll_before),
                             "nll_fit_after": float(t_res.nll_after),
                             "eval_nll_before": float(nll_from_logits(logits_eval, y_eval)),
-                            "eval_nll_after": float(nll_from_logits(apply_temperature(logits_eval, temp), y_eval)),
-                            "eval_ece_before": float(expected_calibration_error(probs_before, y_eval, n_bins=n_bins)),
-                            "eval_ece_after": float(expected_calibration_error(probs_after, y_eval, n_bins=n_bins)),
+                            "eval_nll_after": float(
+                                nll_from_logits(apply_temperature(logits_eval, temp), y_eval)
+                            ),
+                            "eval_ece_before": float(
+                                expected_calibration_error(probs_before, y_eval, n_bins=n_bins)
+                            ),
+                            "eval_ece_after": float(
+                                expected_calibration_error(probs_after, y_eval, n_bins=n_bins)
+                            ),
                         }
 
                         calib_path = run_dir / f"calibration_{fit_split}_to_{split}.json"
                         calib_path.write_text(OmegaConf.to_yaml(report), encoding="utf-8")
                         log.info("Calibration report: %s", str(calib_path))
-                        exp_logger.log_artifact(str(calib_path), name=f"calibration_{fit_split}_to_{split}")
+                        exp_logger.log_artifact(
+                            str(calib_path), name=f"calibration_{fit_split}_to_{split}"
+                        )
 
                         # Save calibrated predictions
                         if save_preds:
                             preds_cal_path = run_dir / f"predictions_{split}_calibrated.parquet"
                             _save_predictions_parquet(preds_cal_path, pack, temperature=temp)
                             log.info("Wrote calibrated predictions: %s", str(preds_cal_path))
-                            exp_logger.log_artifact(str(preds_cal_path), name=f"predictions_{split}_calibrated")
+                            exp_logger.log_artifact(
+                                str(preds_cal_path), name=f"predictions_{split}_calibrated"
+                            )
                     else:
-                        log.info("Skipping calibration: fit_split='%s' not present in dataset config.", fit_split)
+                        log.info(
+                            "Skipping calibration: fit_split='%s' not present in dataset config.",
+                            fit_split,
+                        )
 
                 exp_logger.finish()
 

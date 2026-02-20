@@ -1,8 +1,9 @@
 # src/biosignals/data/transforms/base.py
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -19,6 +20,7 @@ def _copy_meta(meta: Dict[str, Any]) -> Dict[str, Any]:
 @dataclass
 class Identity:
     """No-op transform."""
+
     def __call__(self, sample: Sample) -> Sample:
         return sample
 
@@ -26,6 +28,7 @@ class Identity:
 @dataclass
 class Lambda:
     """Wrap an arbitrary function(sample)->sample."""
+
     fn: Transform
 
     def __call__(self, sample: Sample) -> Sample:
@@ -35,6 +38,7 @@ class Lambda:
 @dataclass
 class RandomApply:
     """Apply transform with probability p."""
+
     transform: Transform
     p: float = 0.5
 
@@ -51,6 +55,7 @@ class OneOf:
     """
     Randomly choose one transform (optionally weighted) and apply it.
     """
+
     transforms: Sequence[Transform]
     weights: Optional[Sequence[float]] = None
     p: float = 1.0
@@ -79,6 +84,7 @@ class RenameModality:
     """
     Rename a modality key in sample.signals (e.g., "ecg" -> "main").
     """
+
     src: str
     dst: str
     overwrite: bool = True
@@ -102,6 +108,7 @@ class KeepModalities:
     Keep only a subset of modalities. Safe as long as it is applied consistently
     to every sample (so collate sees stable keys).
     """
+
     modalities: Sequence[str]
 
     def __call__(self, sample: Sample) -> Sample:
@@ -112,6 +119,7 @@ class KeepModalities:
 @dataclass
 class AddMeta:
     """Attach a constant key/value to sample.meta."""
+
     key: str
     value: Any
 

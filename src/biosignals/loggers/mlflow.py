@@ -1,9 +1,9 @@
 # src/biosignals/loggers/mlflow.py
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Iterable, Tuple
 import json
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
 
 from biosignals.loggers.base import ExperimentLogger
 
@@ -79,16 +79,19 @@ class MLflowLogger(ExperimentLogger):
         if not self._active:
             return
         import mlflow
+
         mlflow.log_metrics({k: float(v) for k, v in metrics.items()}, step=step)
 
     def log_artifact(self, path: str, *, name: Optional[str] = None) -> None:
         if not self._active:
             return
         import mlflow
+
         mlflow.log_artifact(path)
 
     def finish(self) -> None:
         if self._active:
             import mlflow
+
             mlflow.end_run()
             self._active = False

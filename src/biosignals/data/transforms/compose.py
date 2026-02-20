@@ -1,8 +1,8 @@
 # src/biosignals/data/transforms/compose.py
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Callable, Iterable, List
 
 from biosignals.data.types import Sample
 
@@ -19,13 +19,10 @@ class Compose:
         for i, t in enumerate(self.transforms):  # type: ignore[attr-defined]
             if not callable(t):
                 raise TypeError(
-                    f"Compose: transforms[{i}] is not callable. "
-                    f"type={type(t)} value={t}"
+                    f"Compose: transforms[{i}] is not callable. " f"type={type(t)} value={t}"
                 )
 
     def __call__(self, sample: Sample) -> Sample:
         for t in self.transforms:  # type: ignore[attr-defined]
             sample = t(sample)
         return sample
-
-

@@ -1,14 +1,17 @@
 # src/biosignals/data/transforms/signal_ops.py
 from __future__ import annotations
+
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Dict, Optional, Sequence
+from typing import Dict, Optional
 
 import numpy as np
+
 from biosignals.data.types import Sample
 
 try:
-    from scipy.signal import butter, sosfiltfilt, iirnotch
-except Exception as e:  # pragma: no cover
+    from scipy.signal import butter, iirnotch, sosfiltfilt
+except Exception:  # pragma: no cover
     butter = None  # type: ignore
     sosfiltfilt = None  # type: ignore
     iirnotch = None  # type: ignore
@@ -60,11 +63,11 @@ class RandomCrop:
             return sample
 
         T = _tmin(sample)
-        if T <= w:
+        if w >= T:
             return sample
 
         start = int(np.random.randint(0, T - w + 1))
-        signals = {m: x[..., start:start + w] for m, x in sample.signals.items()}
+        signals = {m: x[..., start : start + w] for m, x in sample.signals.items()}
         meta = dict(sample.meta)
         meta["crop_start"] = start
         meta["crop_len"] = w
@@ -81,11 +84,11 @@ class CenterCrop:
             return sample
 
         T = _tmin(sample)
-        if T <= w:
+        if w >= T:
             return sample
 
         start = int((T - w) // 2)
-        signals = {m: x[..., start:start + w] for m, x in sample.signals.items()}
+        signals = {m: x[..., start : start + w] for m, x in sample.signals.items()}
         meta = dict(sample.meta)
         meta["crop_start"] = start
         meta["crop_len"] = w
@@ -101,6 +104,7 @@ class BandpassButter:
     Works per modality. Sampling rate comes from:
       meta["fs_{modality}"] or meta["fs"] or default_fs
     """
+
     low_hz: float = 0.5
     high_hz: float = 40.0
     order: int = 4
@@ -109,7 +113,9 @@ class BandpassButter:
 
     def __call__(self, sample: Sample) -> Sample:
         if butter is None or sosfiltfilt is None:
-            raise ImportError("scipy is required for BandpassButter (scipy.signal.butter, sosfiltfilt).")
+            raise ImportError(
+                "scipy is required for BandpassButter (scipy.signal.butter, sosfiltfilt)."
+            )
 
         out = dict(sample.signals)
         for m in _resolve_modalities(sample, self.modalities):
@@ -142,6 +148,7 @@ class NotchFilter:
 
     Useful to remove line noise (50/60 Hz).
     """
+
     freq_hz: float = 60.0
     q: float = 30.0
     default_fs: float = 500.0
@@ -149,7 +156,9 @@ class NotchFilter:
 
     def __call__(self, sample: Sample) -> Sample:
         if iirnotch is None or sosfiltfilt is None:
-            raise ImportError("scipy is required for NotchFilter (scipy.signal.iirnotch, sosfiltfilt).")
+            raise ImportError(
+                "scipy is required for NotchFilter (scipy.signal.iirnotch, sosfiltfilt)."
+            )
 
         out = dict(sample.signals)
         for m in _resolve_modalities(sample, self.modalities):

@@ -7,23 +7,21 @@ and experiment composition against mock config directories.
 Run from project root:
     PYTHONPATH=$PWD/src python -m pytest tests/test_config_generation.py -v
 """
+
 import json
 import textwrap
-from pathlib import Path
 
 import pytest
 
 from biosignals.agent.tools import (
-    _find_config_root,
-    _read_yaml_safe,
+    _AGENT_GENERATED_MARKER,
+    ConfigSafetyError,
     _parse_modifications,
+    _read_yaml_safe,
     _validate_config_name,
     _validate_group,
     _validate_no_code_injection,
-    _AGENT_GENERATED_MARKER,
-    ConfigSafetyError,
 )
-
 
 # ─────────────────────────────────────────────────
 # Fixture: mock config directory (reused from Tier 1)
@@ -55,7 +53,8 @@ def mock_config_dir(tmp_path):
     # experiment/
     exp_dir = configs / "experiment"
     exp_dir.mkdir()
-    (exp_dir / "galaxyppg_hr_ppg.yaml").write_text(textwrap.dedent("""\
+    (exp_dir / "galaxyppg_hr_ppg.yaml").write_text(
+        textwrap.dedent("""\
         # @package _global_
         defaults:
           - override /dataset: galaxyppg
@@ -75,7 +74,8 @@ def mock_config_dir(tmp_path):
         trainer:
           monitor_metric: val/loss
           monitor_mode: min
-    """))
+    """)
+    )
 
     # trainer/
     trainer_dir = configs / "trainer"
@@ -92,36 +92,24 @@ def mock_config_dir(tmp_path):
     # dataset/
     ds_dir = configs / "dataset"
     ds_dir.mkdir()
-    (ds_dir / "ecg_npz.yaml").write_text(
-        "_target_: biosignals.data.datasets.EcgNpzDataset\n"
-    )
-    (ds_dir / "galaxyppg.yaml").write_text(
-        "_target_: biosignals.data.datasets.GalaxyPPGDataset\n"
-    )
+    (ds_dir / "ecg_npz.yaml").write_text("_target_: biosignals.data.datasets.EcgNpzDataset\n")
+    (ds_dir / "galaxyppg.yaml").write_text("_target_: biosignals.data.datasets.GalaxyPPGDataset\n")
 
     # task/
     task_dir = configs / "task"
     task_dir.mkdir()
-    (task_dir / "classification.yaml").write_text(
-        "_target_: biosignals.tasks.ClassificationTask\n"
-    )
-    (task_dir / "regression.yaml").write_text(
-        "_target_: biosignals.tasks.RegressionTask\n"
-    )
+    (task_dir / "classification.yaml").write_text("_target_: biosignals.tasks.ClassificationTask\n")
+    (task_dir / "regression.yaml").write_text("_target_: biosignals.tasks.RegressionTask\n")
 
     # transforms/ (nested)
     tr_dir = configs / "transforms"
     tr_dir.mkdir()
     ecg_tr = tr_dir / "ecg"
     ecg_tr.mkdir()
-    (ecg_tr / "basic.yaml").write_text(
-        "_target_: biosignals.transforms.EcgBasic\n"
-    )
+    (ecg_tr / "basic.yaml").write_text("_target_: biosignals.transforms.EcgBasic\n")
     ppg_tr = tr_dir / "galaxyppg"
     ppg_tr.mkdir()
-    (ppg_tr / "hr_ppg.yaml").write_text(
-        "_target_: biosignals.transforms.HrPpg\n"
-    )
+    (ppg_tr / "hr_ppg.yaml").write_text("_target_: biosignals.transforms.HrPpg\n")
 
     return tmp_path
 
@@ -273,6 +261,7 @@ class TestCreateConfigVariant:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import create_config_variant
+
         result_json = create_config_variant.forward(
             group="model",
             base_config="transformer1d",
@@ -304,6 +293,7 @@ class TestCreateConfigVariant:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import create_config_variant
+
         result_json = create_config_variant.forward(
             group="model",
             base_config="transformer1d",
@@ -320,6 +310,7 @@ class TestCreateConfigVariant:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import create_config_variant
+
         result_json = create_config_variant.forward(
             group="hydra",
             base_config="default",
@@ -336,6 +327,7 @@ class TestCreateConfigVariant:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import create_config_variant
+
         result_json = create_config_variant.forward(
             group="model",
             base_config="transformer1d",
@@ -352,6 +344,7 @@ class TestCreateConfigVariant:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import create_config_variant
+
         result_json = create_config_variant.forward(
             group="model",
             base_config="nonexistent_model",
@@ -373,14 +366,18 @@ class TestCreateConfigVariant:
 
         # Create first version
         create_config_variant.forward(
-            group="model", base_config="transformer1d",
-            new_name="transformer1d_v1", modifications="n_heads=4",
+            group="model",
+            base_config="transformer1d",
+            new_name="transformer1d_v1",
+            modifications="n_heads=4",
         )
 
         # Overwrite with second version — should succeed
         result_json = create_config_variant.forward(
-            group="model", base_config="transformer1d",
-            new_name="transformer1d_v1", modifications="n_heads=16",
+            group="model",
+            base_config="transformer1d",
+            new_name="transformer1d_v1",
+            modifications="n_heads=16",
         )
         result = json.loads(result_json)
         assert result["success"] is True
@@ -394,6 +391,7 @@ class TestCreateConfigVariant:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import create_config_variant
+
         result_json = create_config_variant.forward(
             group="model",
             base_config="transformer1d",
@@ -410,6 +408,7 @@ class TestCreateConfigVariant:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import create_config_variant
+
         result_json = create_config_variant.forward(
             group="trainer",
             base_config="default",
@@ -440,6 +439,7 @@ class TestComposeExperimentConfig:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import compose_experiment_config
+
         result_json = compose_experiment_config.forward(
             name="ppg_transformer_experiment",
             components="model=transformer1d dataset=galaxyppg task=regression trainer=default",
@@ -473,6 +473,7 @@ class TestComposeExperimentConfig:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import compose_experiment_config
+
         result_json = compose_experiment_config.forward(
             name="bad_experiment",
             components="model=nonexistent_model dataset=galaxyppg",
@@ -489,6 +490,7 @@ class TestComposeExperimentConfig:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import compose_experiment_config
+
         result_json = compose_experiment_config.forward(
             name="simple_experiment",
             components="model=resnet1d dataset=ecg_npz task=classification",
@@ -501,6 +503,7 @@ class TestComposeExperimentConfig:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import compose_experiment_config
+
         result_json = compose_experiment_config.forward(
             name="../../../etc/passwd",
             components="model=resnet1d",
@@ -515,6 +518,7 @@ class TestComposeExperimentConfig:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import compose_experiment_config
+
         result_json = compose_experiment_config.forward(
             name="galaxyppg_hr_ppg",  # Already exists, human-authored
             components="model=resnet1d dataset=galaxyppg task=regression",
@@ -556,6 +560,7 @@ class TestComposeExperimentConfig:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import compose_experiment_config
+
         result_json = compose_experiment_config.forward(
             name="full_ppg_experiment",
             components="model=encoder_classifier dataset=galaxyppg task=regression trainer=fast_dev transforms=galaxyppg/hr_ppg",
@@ -564,7 +569,9 @@ class TestComposeExperimentConfig:
         result = json.loads(result_json)
         assert result["success"] is True
 
-        content = (mock_config_dir / "configs" / "experiment" / "full_ppg_experiment.yaml").read_text()
+        content = (
+            mock_config_dir / "configs" / "experiment" / "full_ppg_experiment.yaml"
+        ).read_text()
         assert "override /transforms: galaxyppg/hr_ppg" in content
 
     def test_rejects_code_injection_in_overrides(self, mock_config_dir, monkeypatch):
@@ -572,6 +579,7 @@ class TestComposeExperimentConfig:
         monkeypatch.chdir(mock_config_dir)
 
         from biosignals.agent.tools import compose_experiment_config
+
         result_json = compose_experiment_config.forward(
             name="safe_experiment",
             components="model=resnet1d dataset=ecg_npz task=classification",
@@ -595,43 +603,53 @@ class TestEndToEndWorkflow:
         """
         monkeypatch.chdir(mock_config_dir)
 
-        from biosignals.agent.tools import create_config_variant, compose_experiment_config
+        from biosignals.agent.tools import compose_experiment_config, create_config_variant
 
         # Step 1: Create a model variant
-        r1 = json.loads(create_config_variant.forward(
-            group="model",
-            base_config="transformer1d",
-            new_name="transformer1d_wide",
-            modifications="d_model=512 n_heads=8 n_layers=6",
-        ))
+        r1 = json.loads(
+            create_config_variant.forward(
+                group="model",
+                base_config="transformer1d",
+                new_name="transformer1d_wide",
+                modifications="d_model=512 n_heads=8 n_layers=6",
+            )
+        )
         assert r1["success"] is True
 
         # Step 2: Create a trainer variant
-        r2 = json.loads(create_config_variant.forward(
-            group="trainer",
-            base_config="default",
-            new_name="long_train",
-            modifications="epochs=50 lr=0.0001",
-        ))
+        r2 = json.loads(
+            create_config_variant.forward(
+                group="trainer",
+                base_config="default",
+                new_name="long_train",
+                modifications="epochs=50 lr=0.0001",
+            )
+        )
         assert r2["success"] is True
 
         # Step 3: Compose an experiment using the new variants
-        r3 = json.loads(compose_experiment_config.forward(
-            name="ppg_wide_transformer_long",
-            components="model=transformer1d_wide dataset=galaxyppg task=regression trainer=long_train transforms=galaxyppg/hr_ppg",
-            extra_overrides="model.in_channels=1 model.num_classes=1 trainer.monitor_metric=val/mae trainer.monitor_mode=min",
-        ))
+        r3 = json.loads(
+            compose_experiment_config.forward(
+                name="ppg_wide_transformer_long",
+                components="model=transformer1d_wide dataset=galaxyppg task=regression trainer=long_train transforms=galaxyppg/hr_ppg",
+                extra_overrides="model.in_channels=1 model.num_classes=1 trainer.monitor_metric=val/mae trainer.monitor_mode=min",
+            )
+        )
         assert r3["success"] is True
         assert r3["override_syntax"] == "experiment=ppg_wide_transformer_long"
 
         # Step 4: Verify the experiment file references our variants
-        exp_content = (mock_config_dir / "configs" / "experiment" / "ppg_wide_transformer_long.yaml").read_text()
+        exp_content = (
+            mock_config_dir / "configs" / "experiment" / "ppg_wide_transformer_long.yaml"
+        ).read_text()
         assert "override /model: transformer1d_wide" in exp_content
         assert "override /trainer: long_train" in exp_content
         assert "in_channels" in exp_content
 
         # Step 5: Verify the model variant has correct params
-        model_data = _read_yaml_safe(mock_config_dir / "configs" / "model" / "transformer1d_wide.yaml")
+        model_data = _read_yaml_safe(
+            mock_config_dir / "configs" / "model" / "transformer1d_wide.yaml"
+        )
         assert model_data["d_model"] == 512
         assert model_data["n_heads"] == 8
         assert model_data["_target_"] == "biosignals.models.transformer.Transformer1D"
@@ -644,15 +662,16 @@ class TestEndToEndWorkflow:
 
         # Create a variant
         create_config_variant.forward(
-            group="model", base_config="transformer1d",
-            new_name="transformer1d_big", modifications="d_model=1024",
+            group="model",
+            base_config="transformer1d",
+            new_name="transformer1d_big",
+            modifications="d_model=1024",
         )
 
         # Verify it appears in listing
         listing = list_available_configs.forward()
         assert "transformer1d_big" in listing
 
-        
 
 # ---------------------------------------------------------
 

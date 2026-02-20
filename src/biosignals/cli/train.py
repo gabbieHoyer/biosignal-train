@@ -1,24 +1,29 @@
 # src/biosignals/cli/train.py
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
-import logging
 
 import hydra
-from hydra.utils import instantiate
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig, OmegaConf
 import torch
+from hydra.core.hydra_config import HydraConfig
+from hydra.utils import instantiate
+from omegaconf import DictConfig, OmegaConf
 
 from biosignals.config.schema import validate_cfg
-from biosignals.utils.reproducibility import seed_everything, set_float32_matmul_precision
-from biosignals.utils.distributed import init_distributed, cleanup_distributed, is_distributed
-from biosignals.utils.distributed import get_rank, is_main_process
-from biosignals.utils.checkpointing import load_partial_state_dict
-from biosignals.engine.trainer import Trainer
 from biosignals.data.datamodule import make_train_val_loaders
+from biosignals.engine.trainer import Trainer
 from biosignals.loggers.base import NoopLogger
+from biosignals.utils.checkpointing import load_partial_state_dict
+from biosignals.utils.distributed import (
+    cleanup_distributed,
+    get_rank,
+    init_distributed,
+    is_distributed,
+    is_main_process,
+)
+from biosignals.utils.reproducibility import seed_everything, set_float32_matmul_precision
 
 log = logging.getLogger("biosignals")
 
