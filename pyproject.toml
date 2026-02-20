@@ -20,6 +20,9 @@ dev = [
   "types-PyYAML",
   "pre-commit",
 ]
+agent = [
+  "smolagents",
+]
 wandb = ["wandb"]
 mlflow = ["mlflow"]
 
