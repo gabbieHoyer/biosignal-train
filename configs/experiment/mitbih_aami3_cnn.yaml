@@ -1,0 +1,36 @@
+# @package _global_
+
+defaults:
+  - override /dataset: mitbih
+  - override /task: classification
+  - override /transforms: mitbih/aami3
+  - override /model: resnet1d
+  - override /trainer: fast_dev
+  - _self_
+
+# MIT-BIH AAMI3 is multiclass (N/S/V)
+task:
+  primary_modality: main
+  num_classes: 3
+  multilabel: false
+
+# 2 leads stored by standardizer (lead_indices 0,1)
+model:
+  in_channels: 2
+  num_classes: 3
+  primary_modality: main
+
+data:
+  batch_size: 256
+  num_workers: 4
+
+trainer:
+  lr: 3e-4
+  monitor_metric: val/acc
+  monitor_mode: max
+
+
+# python -m biosignals.cli.train experiment=mitbih_aami3_cnn
+
+
+# ------------------------------------------
