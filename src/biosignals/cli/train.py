@@ -61,17 +61,6 @@ def main(cfg: DictConfig) -> None:
         trainer_cfg.output_dir = str(run_dir)
         trainer = Trainer(trainer_cfg)
 
-        # # Optional partial init (SSL -> finetune)
-        # if "init" in cfg and cfg.init.get("ckpt_path", None):
-        #     stats = load_partial_state_dict(
-        #         model=model,
-        #         ckpt_path=cfg.init.ckpt_path,
-        #         src_prefix=cfg.init.src_prefix,
-        #         dst_prefix=cfg.init.dst_prefix,
-        #     )
-        #     if is_main_process():
-        #         log.info("Init from SSL: %s", stats)
-
         # Optional partial init (SSL -> finetune)
         init_cfg = cfg.get("init")
         if init_cfg is not None and not OmegaConf.is_missing(init_cfg, "ckpt_path"):

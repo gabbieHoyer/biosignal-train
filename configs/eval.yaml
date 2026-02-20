@@ -1,0 +1,42 @@
+defaults:
+  - dataset: mitbih
+  - task: classification
+  - model: resnet1d
+  - transforms: mitbih/aami3
+  - trainer: default
+  - logger: wandb
+  - experiment: null
+  - _self_
+  - override hydra/job_logging: per_rank
+
+dist:
+  backend: nccl
+
+data:
+  _target_: biosignals.data.datamodule.DataConfig
+  batch_size: 256
+  num_workers: 4
+  pin_memory: true
+  drop_last: false
+  prefetch_factor: 2
+
+logging:
+  level: INFO
+
+seed: 42
+
+eval:
+  split: test
+  # Either set ckpt_path directly OR provide run_dir to auto-select checkpoints/<ckpt_name>
+  ckpt_path: null
+  run_dir: null
+  ckpt_name: best.pt
+  strict: true
+
+  save_predictions: true
+
+  calibration:
+    enable: true
+    fit_split: val
+    n_bins: 15
+    max_iter: 50
