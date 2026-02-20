@@ -36,10 +36,8 @@ class ManifestWindowDataset(BiosignalDataset):
         records_path: str,
         windows_path: str,
         split: str,
-        transform=None,
-        cache_dir: Optional[str] = None,
     ) -> None:
-        super().__init__(split=split, transform=transform, cache_dir=cache_dir)
+        super().__init__(split=split)
         self.records = pd.read_parquet(records_path)
         self.windows = pd.read_parquet(windows_path)
         self.windows = self.windows[self.windows["split"] == split].reset_index(drop=True)

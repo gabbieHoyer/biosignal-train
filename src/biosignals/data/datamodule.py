@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple, Any, Dict
+from typing import Optional, Tuple, Any
 
 from hydra.utils import instantiate
 from omegaconf import DictConfig
@@ -73,6 +73,22 @@ def _get_cache_dir(dataset_cfg: DictConfig, split: str) -> Optional[str]:
     return _maybe_cache_dir(cache_cfg.get(split))
 
 
+def _get_transform_cfg(transforms_cfg: DictConfig, split: str):
+    """
+    Transforms convention:
+      - train uses transforms.train
+      - val uses transforms.val
+      - test uses transforms.test if present else transforms.val
+    """
+    if split in transforms_cfg and transforms_cfg.get(split) is not None:
+        return transforms_cfg.get(split)
+    if split != "train" and "val" in transforms_cfg:
+        return transforms_cfg.val
+    if "train" in transforms_cfg:
+        return transforms_cfg.train
+    return transforms_cfg
+
+
 def build_dataset(
     *,
     split_cfg: DictConfig,
@@ -98,38 +114,79 @@ def build_dataset(
     return ds
 
 
+def make_split_loader(
+    *,
+    dataset_cfg: DictConfig,
+    transforms_cfg: DictConfig,
+    task,
+    data_cfg: DataConfig,
+    split: str,
+) -> DataLoader:
+    """
+    Build one loader for a given split: train | val | test
+    """
+    if split not in dataset_cfg or dataset_cfg.get(split) is None:
+        raise KeyError(f"dataset config has no split '{split}'. Available: {list(dataset_cfg.keys())}")
+
+    rank = get_rank() if is_distributed() else 0
+    cache_dir = _get_cache_dir(dataset_cfg, split)
+    tf_cfg = _get_transform_cfg(transforms_cfg, split)
+
+    ds = build_dataset(
+        split_cfg=dataset_cfg.get(split),
+        transform_cfg=tf_cfg,
+        cache_dir=cache_dir,
+        cache_prefix=f"{split}_r{rank}",
+    )
+    return make_loader(ds, task, data_cfg, shuffle=(split == "train"))
+
+
 def make_train_val_loaders(
     dataset_cfg: DictConfig,
     transforms_cfg: DictConfig,
     task,
     data_cfg: DataConfig,
 ) -> Tuple[DataLoader, Optional[DataLoader]]:
-    rank = get_rank() if is_distributed() else 0
-
-    train_cache_dir = _get_cache_dir(dataset_cfg, "train")
-    val_cache_dir = _get_cache_dir(dataset_cfg, "val")
-
-    train_ds = build_dataset(
-        split_cfg=dataset_cfg.train,
-        transform_cfg=transforms_cfg.train,
-        cache_dir=train_cache_dir,
-        cache_prefix=f"train_r{rank}",
+    train_loader = make_split_loader(
+        dataset_cfg=dataset_cfg,
+        transforms_cfg=transforms_cfg,
+        task=task,
+        data_cfg=data_cfg,
+        split="train",
     )
-
-    train_loader = make_loader(train_ds, task, data_cfg, shuffle=True)
 
     val_loader: Optional[DataLoader] = None
     if "val" in dataset_cfg and dataset_cfg.val is not None:
-        val_ds = build_dataset(
-            split_cfg=dataset_cfg.val,
-            transform_cfg=transforms_cfg.val,
-            cache_dir=val_cache_dir,
-            cache_prefix=f"val_r{rank}",
+        val_loader = make_split_loader(
+            dataset_cfg=dataset_cfg,
+            transforms_cfg=transforms_cfg,
+            task=task,
+            data_cfg=data_cfg,
+            split="val",
         )
-        val_loader = make_loader(val_ds, task, data_cfg, shuffle=False)
 
     return train_loader, val_loader
 
 
+def make_train_val_test_loaders(
+    dataset_cfg: DictConfig,
+    transforms_cfg: DictConfig,
+    task,
+    data_cfg: DataConfig,
+) -> Tuple[DataLoader, Optional[DataLoader], Optional[DataLoader]]:
+    train_loader, val_loader = make_train_val_loaders(dataset_cfg, transforms_cfg, task, data_cfg)
 
-# -------------------------------------------------------
+    test_loader: Optional[DataLoader] = None
+    if "test" in dataset_cfg and dataset_cfg.test is not None:
+        test_loader = make_split_loader(
+            dataset_cfg=dataset_cfg,
+            transforms_cfg=transforms_cfg,
+            task=task,
+            data_cfg=data_cfg,
+            split="test",
+        )
+
+    return train_loader, val_loader, test_loader
+
+
+# --------------------------------------------------

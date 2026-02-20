@@ -59,6 +59,10 @@ class ClassificationTask(Task):
                 "mask_by_modality": masks,                  # Dict[str,(B,T)]
                 "mask": masks[pm],                          # (B,T) for primary modality
                 "ids": [s.meta.get("id") for s in samples],
+
+                "sample_meta": [s.meta for s in samples],
+                "subject_ids": [s.meta.get("subject_id") for s in samples],
+                "record_ids": [s.meta.get("record_id") or s.meta.get("npz_id") for s in samples],
             }
             return Batch(signals=signals, targets={"y": y}, meta=meta)
 

@@ -45,6 +45,10 @@ class RegressionTask(Task):
                 "mask": masks.get(self.primary_modality, next(iter(masks.values()))),
                 "ids": [s.meta.get("id") for s in samples],
                 "fs": [s.meta.get("fs") for s in samples],
+                "sample_meta": [s.meta for s in samples],
+                "subject_ids": [s.meta.get("subject_id") for s in samples],
+                "record_ids": [s.meta.get("record_id") or s.meta.get("npz_id") for s in samples],
+
             }
             return Batch(signals=signals, targets={"y": y}, meta=meta)
 

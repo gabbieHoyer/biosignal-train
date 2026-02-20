@@ -95,6 +95,7 @@ class DatasetGroupConfig:
 
 @dataclass
 class TransformsGroupConfig:
+    params: Dict[str, Any] = field(default_factory=dict)  # free-form
     train: Any = None
     val: Any = None
     test: Any = None

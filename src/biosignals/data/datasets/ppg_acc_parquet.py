@@ -85,8 +85,8 @@ class PpgAccParquetDataset(BiosignalDataset):
       )
     """
 
-    def __init__(self, root: str, split: str, transform=None, cache_dir=None) -> None:
-        super().__init__(split=split, transform=transform, cache_dir=cache_dir)
+    def __init__(self, root: str, split: str) -> None:
+        super().__init__(split=split)
         self.root = Path(root) / split
         self.files = sorted(self.root.glob("*.parquet"))
 

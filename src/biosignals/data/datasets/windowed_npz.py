@@ -23,6 +23,7 @@ def _as_ct(x: np.ndarray, name: str) -> np.ndarray:
         return x.astype(np.float32, copy=False)[None, :]
     if x.ndim == 2:
         x = x.astype(np.float32, copy=False)
+        # Heuristic transpose if (T,C)
         if x.shape[0] > 16 and x.shape[1] <= 16:
             return x.T
         return x
@@ -65,12 +66,16 @@ class _LRUSubjectCache:
 class WindowedNpzDataset(BiosignalDataset):
     """
     Raw dataset:
-      - subject-level signals stored as NPZ under root/subjects/{subject_id}.npz
+      - subject/record-level signals stored as NPZ under root/subjects/{npz_id}.npz
       - window manifest stored under root/{view} (parquet/csv), one row per example
 
-    NOTE (Option B):
+    Option B:
       - No transforms here
       - No disk caching here
+
+    Key improvement:
+      - Allow `npz_col` (file id) to differ from `subject_col` (grouping id).
+        This is important for datasets like MIT-BIH where record_id != subject_id group.
     """
 
     def __init__(
@@ -84,14 +89,16 @@ class WindowedNpzDataset(BiosignalDataset):
         label_col: Optional[str] = "hr",
         split_col: str = "split",
         subject_col: str = "subject_id",
+        npz_col: Optional[str] = None,
         start_col: str = "start_idx",
         end_col: str = "end_idx",
         id_col: Optional[str] = None,
         dropna_labels: bool = True,
         subject_cache_size: int = 8,
+        extra_meta_cols: Sequence[str] = (),
         **kwargs,
     ) -> None:
-        # Catch config drift early (e.g., old cache_dir/transform keys)
+        # Catch config drift early
         if len(kwargs) > 0:
             raise TypeError(
                 f"WindowedNpzDataset got unexpected keys: {list(kwargs.keys())}. "
@@ -107,14 +114,22 @@ class WindowedNpzDataset(BiosignalDataset):
         self.root = Path(root)
         self.view_path = self.root / view
         self.subjects_dir = self.root / subjects_dir
+
         self.modalities = list(modalities)
         self.label_col = label_col
         self.split_col = split_col
+
+        # subject_col is the grouping id stored in meta
         self.subject_col = subject_col
+
+        # npz_col is the file id used to locate NPZ. Defaults to subject_col for backward compatibility.
+        self.npz_col = npz_col or subject_col
+
         self.start_col = start_col
         self.end_col = end_col
         self.id_col = id_col
         self.dropna_labels = bool(dropna_labels)
+        self.extra_meta_cols = list(extra_meta_cols)
 
         if not self.view_path.exists():
             raise FileNotFoundError(f"Missing view file: {self.view_path}")
@@ -126,7 +141,8 @@ class WindowedNpzDataset(BiosignalDataset):
         else:
             df = pd.read_csv(self.view_path)
 
-        for c in [self.subject_col, self.start_col, self.end_col]:
+        # Required columns
+        for c in [self.subject_col, self.npz_col, self.start_col, self.end_col]:
             if c not in df.columns:
                 raise KeyError(f"View is missing required column '{c}'. Found: {df.columns.tolist()}")
 
@@ -159,40 +175,42 @@ class WindowedNpzDataset(BiosignalDataset):
     def __len__(self) -> int:
         return len(self.rows)
 
-    def _load_subject_npz(self, subject_id: str) -> Dict[str, np.ndarray]:
-        cached = self._subj_cache.get(subject_id)
+    def _load_subject_npz(self, npz_id: str) -> Dict[str, np.ndarray]:
+        cached = self._subj_cache.get(npz_id)
         if cached is not None:
             return cached
 
-        npz_path = self.subjects_dir / f"{subject_id}.npz"
+        npz_path = self.subjects_dir / f"{npz_id}.npz"
         if not npz_path.exists():
-            raise FileNotFoundError(f"Missing subject NPZ: {npz_path}")
+            raise FileNotFoundError(f"Missing NPZ: {npz_path}")
 
         with np.load(npz_path, allow_pickle=False) as z:
             payload: Dict[str, np.ndarray] = {k: z[k] for k in z.files}
 
-        self._subj_cache.put(subject_id, payload)
+        self._subj_cache.put(npz_id, payload)
         return payload
 
     def _load_raw(self, idx: int) -> Sample:
         r = self.rows[idx]
 
-        subject_id = str(r[self.subject_col])
+        subject_id = str(r[self.subject_col])  # grouping id
+        npz_id = str(r[self.npz_col])          # file id
+
         i0 = int(r[self.start_col])
         i1 = int(r[self.end_col])
         if i1 <= i0:
-            raise ValueError(f"Bad window indices for subject={subject_id}: start={i0}, end={i1}")
+            raise ValueError(f"Bad window indices for npz_id={npz_id}: start={i0}, end={i1}")
 
-        subj = self._load_subject_npz(subject_id)
+        subj = self._load_subject_npz(npz_id)
 
         signals: Dict[str, np.ndarray] = {}
         for m in self.modalities:
             if m not in subj:
-                raise KeyError(f"Subject {subject_id} NPZ missing modality key '{m}'. Keys={list(subj.keys())}")
+                raise KeyError(f"NPZ {npz_id} missing modality key '{m}'. Keys={list(subj.keys())}")
             x = _as_ct(subj[m], name=m)
             if i1 > x.shape[-1]:
                 raise IndexError(
-                    f"Window end_idx={i1} exceeds signal length T={x.shape[-1]} for subject={subject_id}, modality={m}"
+                    f"Window end_idx={i1} exceeds signal length T={x.shape[-1]} for npz_id={npz_id}, modality={m}"
                 )
             signals[m] = x[:, i0:i1]
 
@@ -200,27 +218,39 @@ class WindowedNpzDataset(BiosignalDataset):
         if self.label_col is not None:
             targets["y"] = r.get(self.label_col, None)
 
-        if self.id_col is not None and self.id_col in r:
+        # Prefer explicit example id if provided
+        if self.id_col is not None and self.id_col in r and r[self.id_col] is not None:
             sample_id = str(r[self.id_col])
         else:
-            sample_id = f"{subject_id}:{i0}:{i1}"
+            # Use npz_id to ensure uniqueness when subject_id groups multiple records
+            sample_id = f"{npz_id}:{i0}:{i1}"
 
         fs = _scalar(subj.get("fs", subj.get("fs_out", None)), default=0.0)
 
-        meta = {
+        meta: Dict[str, Any] = {
             "id": sample_id,
             "subject_id": subject_id,
+            "record_id": npz_id,
             "fs": float(fs),
             "start_idx": i0,
             "end_idx": i1,
         }
 
+        # Helpful when grouping != file id
+        if npz_id != subject_id:
+            meta["npz_id"] = npz_id
+
+        # Common optional columns (kept from your original)
         for opt in ["session_id", "session", "tsst", "ssst", "t_start_ms", "t_end_ms", "t_center_ms"]:
             if opt in r:
                 meta[opt] = r[opt]
 
+        # User-configurable extra meta passthrough
+        for k in self.extra_meta_cols:
+            if k in r and k not in meta:
+                meta[k] = r[k]
+
         return Sample(signals=signals, targets=targets, meta=meta)
 
 
-
-# ---------------------------------------------------------------
+# ---------------------------------------------
